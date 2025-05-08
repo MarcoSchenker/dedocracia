@@ -12,7 +12,7 @@ const db = new Client({
 db.connect()
   .then(() => {
     console.log('🟢 Conectado a PostgreSQL');
-    return db.query('SELECT * FROM datos ORDER BY id');
+    return db.query('SELECT * FROM usuarios ORDER BY id');
   })
   .then(result => {
     console.log('📋 Datos en la tabla "datos":');
