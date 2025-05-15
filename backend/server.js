@@ -4,7 +4,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5432;
 // Si estás en la instancia pública de AWS, asegúrate de escuchar en todas las interfaces
 const HOST = process.env.HOST || '0.0.0.0';
 
