@@ -1,0 +1,323 @@
+/* Estilos generales */
+:root {
+  --primary-color: #2052d3;
+  --secondary-color: #f7f7f7;
+  --accent-color: #ff6e40;
+  --text-color: #333;
+  --light-text: #666;
+  --border-color: #ddd;
+  --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --success-color: #28a745;
+  --error-color: #dc3545;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-color);
+  background-color: #f5f5f5;
+}
+
+.App {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Layout principal */
+.main-container {
+  display: flex;
+  flex: 1;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 80px;
+  background-color: var(--primary-color);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+  position: fixed;
+  height: 100vh;
+}
+
+.sidebar-logo {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.sidebar-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.7rem;
+}
+
+.sidebar-item:hover, .sidebar-item.active {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.sidebar-item-icon {
+  margin-bottom: 5px;
+}
+
+/* Dashboard */
+.dashboard {
+  flex: 1;
+  padding: 20px;
+  background-color: var(--secondary-color);
+  overflow-y: auto;
+  margin-left: 80px; /* Coincide con el ancho del sidebar */
+  width: calc(100% - 80px);
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.dashboard-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+/* Tarjetas de contenido */
+.card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: var(--box-shadow);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.card-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: var(--primary-color);
+}
+
+/* Tabla de líderes */
+.leaders-table, .candidates-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.leaders-table th, .leaders-table td,
+.candidates-table th, .candidates-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.leaders-table th, .candidates-table th {
+  background-color: #f2f2f2;
+  font-weight: 600;
+}
+
+.leaders-table tbody tr:hover, .candidates-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.trend-up {
+  color: green;
+}
+
+.trend-down {
+  color: red;
+}
+
+/* Gráficos y estadísticas */
+.stats-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stats-title {
+  font-size: 1.2rem;
+}
+
+.stats-chart {
+  height: 300px;
+  margin-top: 20px;
+}
+
+/* Grid para las tarjetas de dashboard */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Componente de huella digital */
+.fingerprint-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.fingerprint-scanner {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f9f9f9;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.fingerprint-scanner:hover {
+  border-color: var(--primary-color);
+}
+
+.fingerprint-icon {
+  width: 100px;
+  height: 100px;
+  transition: all 0.3s ease;
+}
+
+.fingerprint-scanner:hover .fingerprint-icon {
+  transform: scale(1.1);
+}
+
+.fingerprint-message {
+  margin-top: 15px;
+  text-align: center;
+  color: var(--light-text);
+}
+
+/* Formularios y controles */
+.form-container {
+  padding: 15px;
+}
+
+.input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.form-input {
+  flex: 1;
+  padding: 10px 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(32, 82, 211, 0.2);
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+.btn-primary:hover {
+  background-color: #1844b3;
+}
+
+.message {
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 4px;
+  color: var(--success-color);
+  background-color: rgba(40, 167, 69, 0.1);
+}
+
+.message.error {
+  color: var(--error-color);
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+.candidates-list {
+  margin-top: 20px;
+}
+
+.candidates-list h3 {
+  margin-bottom: 15px;
+  font-size: 1.1rem;
+  color: var(--text-color);
+}
+
+/* Estilos para el pie de página */
+.footer {
+  background-color: var(--primary-color);
+  color: white;
+  text-align: center;
+  padding: 10px;
+  font-size: 0.8rem;
+}
+
+/* Utilidades */
+.mt-4 {
+  margin-top: 1rem;
+}
+
+.p-4 {
+  padding: 1rem;
+}
+
+.text-center {
+  text-align: center;
+}
