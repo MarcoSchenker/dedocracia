@@ -1,8 +1,43 @@
 import React from 'react';
+import { Users, Map, PieChart, Activity, FileText, Key, Settings } from 'lucide-react';
 
 const Sidebar = ({ activeSection, onSectionChange }) => {
     const menuItems = [
-
+        {
+            id: 'dashboard',
+            name: 'Dashboard',
+            icon: <Activity size={24} />
+        },
+        {
+            id: 'lideres',
+            name: 'Líderes',
+            icon: <Users size={24} />
+        },
+        {
+            id: 'estadisticas',
+            name: 'Estadísticas',
+            icon: <PieChart size={24} />
+        },
+        {
+            id: 'regiones',
+            name: 'Regiones',
+            icon: <Map size={24} />
+        },
+        {
+            id: 'reportes',
+            name: 'Reportes',
+            icon: <FileText size={24} />
+        },
+        {
+            id: 'autenticacion',
+            name: 'Autenticación',
+            icon: <Key size={24} />
+        },
+        {
+            id: 'configuracion',
+            name: 'Configuración',
+            icon: <Settings size={24} />
+        }
     ];
 
     return (

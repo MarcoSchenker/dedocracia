@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Users, Map, PieChart, Activity, TrendingUp, TrendingDown, Plus } from 'lucide-react';
 
+// API base URL from environment variables or fallback to localhost
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
 const Dashboard = () => {
     const [candidatos, setCandidatos] = useState([]);
     const [estadisticas, setEstadisticas] = useState([]);
@@ -9,44 +12,75 @@ const Dashboard = () => {
     const [activeSection, setActiveSection] = useState('dashboard');
     const [nuevoNombre, setNuevoNombre] = useState('');
     const [mensaje, setMensaje] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     // Cargar datos
     useEffect(() => {
-        fetchCandidatos();
-        fetchEstadisticas();
-        fetchLideres();
+        const loadData = async () => {
+            setLoading(true);
+            try {
+                await Promise.all([
+                    fetchCandidatos(),
+                    fetchEstadisticas(),
+                    fetchLideres()
+                ]);
+                setError(null);
+            } catch (err) {
+                console.error('Error cargando datos:', err);
+                setError('Error de conexión con el servidor. Intente nuevamente más tarde.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+        
+        // Configurar actualización automática cada 30 segundos
+        const intervalId = setInterval(() => {
+            loadData();
+        }, 30000);
+        
+        // Limpiar intervalo cuando el componente se desmonte
+        return () => clearInterval(intervalId);
     }, []);
 
     // Función para obtener candidatos
     const fetchCandidatos = async () => {
         try {
-            const response = await fetch('http://localhost:3001/api/candidatos');
+            const response = await fetch(`${API_BASE_URL}/api/candidatos`);
+            if (!response.ok) throw new Error('Error en la respuesta del servidor');
             const data = await response.json();
             setCandidatos(data);
         } catch (error) {
             console.error('Error al obtener candidatos:', error);
+            throw error;
         }
     };
 
     // Función para obtener estadísticas
     const fetchEstadisticas = async () => {
         try {
-            const response = await fetch('http://localhost:3001/api/estadisticas');
+            const response = await fetch(`${API_BASE_URL}/api/estadisticas`);
+            if (!response.ok) throw new Error('Error en la respuesta del servidor');
             const data = await response.json();
             setEstadisticas(data);
         } catch (error) {
             console.error('Error al obtener estadísticas:', error);
+            throw error;
         }
     };
 
     // Función para obtener líderes
     const fetchLideres = async () => {
         try {
-            const response = await fetch('http://localhost:3001/api/lideres');
+            const response = await fetch(`${API_BASE_URL}/api/lideres`);
+            if (!response.ok) throw new Error('Error en la respuesta del servidor');
             const data = await response.json();
             setLideres(data);
         } catch (error) {
             console.error('Error al obtener líderes:', error);
+            throw error;
         }
     };
 
@@ -58,7 +92,8 @@ const Dashboard = () => {
         }
 
         try {
-            const response = await fetch('http://localhost:3001/api/candidatos', {
+            setMensaje('');
+            const response = await fetch(`${API_BASE_URL}/api/candidatos`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -82,6 +117,76 @@ const Dashboard = () => {
             setMensaje('Error al conectar con el servidor');
         }
     };
+
+    // Comprobar si se está cargando o hay error
+    if (loading && candidatos.length === 0) {
+        return (
+            <div className="App">
+                <div className="main-container">
+                    <div className="sidebar">
+                        <div className="sidebar-logo">
+                            <div>DeD</div>
+                        </div>
+                        <div className="sidebar-menu">
+                            <div className="sidebar-item active">
+                                <div className="sidebar-item-icon">
+                                    <Activity size={24} />
+                                </div>
+                                <div className="sidebar-item-label">Dashboard</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="dashboard">
+                        <div className="dashboard-header">
+                            <h2 className="dashboard-title">DeDoCracia</h2>
+                        </div>
+                        <div className="card">
+                            <div className="card-title">Cargando datos...</div>
+                            <div className="p-4 text-center">
+                                <p>Por favor espere mientras se cargan los datos del sistema.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    
+    if (error) {
+        return (
+            <div className="App">
+                <div className="main-container">
+                    <div className="sidebar">
+                        <div className="sidebar-logo">
+                            <div>DeD</div>
+                        </div>
+                        <div className="sidebar-menu">
+                            <div className="sidebar-item active">
+                                <div className="sidebar-item-icon">
+                                    <Activity size={24} />
+                                </div>
+                                <div className="sidebar-item-label">Dashboard</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="dashboard">
+                        <div className="dashboard-header">
+                            <h2 className="dashboard-title">DeDoCracia</h2>
+                        </div>
+                        <div className="card">
+                            <div className="card-title">Error de conexión</div>
+                            <div className="p-4 text-center">
+                                <p className="message error">{error}</p>
+                                <button className="btn-primary mt-4" onClick={() => window.location.reload()}>
+                                    Reintentar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     const renderContent = () => {
         switch (activeSection) {
@@ -142,7 +247,7 @@ const Dashboard = () => {
                                         <Plus size={16} /> Agregar
                                     </button>
                                 </div>
-                                {mensaje && <div className="message">{mensaje}</div>}
+                                {mensaje && <div className={`message ${mensaje.includes('Error') ? 'error' : ''}`}>{mensaje}</div>}
 
                                 <div className="candidates-list mt-4">
                                     <h3>Candidatos Registrados ({candidatos.length})</h3>
