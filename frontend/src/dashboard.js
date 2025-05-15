@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import {React, useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Users, Map, PieChart, Activity, TrendingUp, TrendingDown, Plus } from 'lucide-react';
+import { Users, Activity, TrendingUp, TrendingDown, Plus } from 'lucide-react';
 
 // API base URL from environment variables or fallback to localhost
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
