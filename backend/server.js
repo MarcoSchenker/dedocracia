@@ -4,10 +4,15 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5432;
+const PORT = process.env.PORT || 3000;
 // Si estás en la instancia pública de AWS, asegúrate de escuchar en todas las interfaces
 const HOST = process.env.HOST || '0.0.0.0';
 
+// Inicia el servidor (al final del archivo)
+app.listen(PORT, HOST, () => {
+  console.log(`🔥 Servidor escuchando en http://${HOST}:${PORT}`);
+  console.log(`🌐 Acceso externo: http://34.197.123.11:${PORT}`);
+});
 // Configuración de CORS para permitir peticiones desde el frontend
 app.use(cors({
   origin: process.env.FRONTEND_URL || '*', // '*' permite cualquier origen en desarrollo
