@@ -15,14 +15,14 @@ app.options('*', cors()); // Permitir preflight requests
 app.use(express.json()); // Permite manejar el cuerpo de las peticiones como JSON
 
 // Ruta principal
-app.get('/', (res) => {
+app.get('/', (req, res) => {
     res.send('API funcionando');
 });
 
 // Rutas para usuarios
 // GET: Obtener todos los usuarios
-app.get('/api/usuarios', async (res) => {
-  
+app.get('/api/usuarios', async (req, res) => {
+
   try {
     const { rows } = await pool.query('SELECT * FROM usuarios');
     res.json(rows);
@@ -64,7 +64,7 @@ app.post('/api/usuarios', async (req, res) => {
 
 // Rutas para candidatos
 // GET: Obtener todos los candidatos
-app.get('/api/candidatos', async (res) => {
+app.get('/api/candidatos', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM candidatos ORDER BY id_candidato ASC');
     res.status(200).json(rows);
@@ -152,7 +152,7 @@ app.get('/api/estadisticas', async (req, res) => {
 });
 
 // GET: Obtener top líderes
-app.get('/api/lideres', async (res) => {
+app.get('/api/lideres', async (req, res) => {
   const query = `
     SELECT c.id_candidato, c.nombre, 
            COUNT(v.id_voto) as votos_validos,
