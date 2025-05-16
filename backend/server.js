@@ -9,11 +9,8 @@ const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 // Configuración de CORS para permitir peticiones desde el frontend
-app.use(cors({
-  origin: process.env.FRONTEND_URL || '*', // '*' permite cualquier origen en desarrollo
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(cors());
+app.options('*', cors()); // Permitir preflight requests
 
 app.use(express.json()); // Permite manejar el cuerpo de las peticiones como JSON
 

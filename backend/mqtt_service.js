@@ -3,7 +3,7 @@ const pool = require('./db');
 require('dotenv').config();
 
 // Configuración de MQTT
-const MQTT_BROKER = process.env.MQTT_BROKER || 'mqtt://localhost';
+const MQTT_BROKER = process.env.MQTT_BROKER;
 const MQTT_PORT = process.env.MQTT_PORT || 1883;
 
 const MQTT_OPTIONS = {

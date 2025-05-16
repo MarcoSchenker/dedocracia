@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import { Users, Activity, TrendingUp, TrendingDown, Plus } from 'lucide-react';
 
 // API base URL from environment variables or fallback to localhost
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://34.197.123.11:3000';
 
 const Dashboard = () => {
     const [candidatos, setCandidatos] = useState([]);
