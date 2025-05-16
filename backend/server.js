@@ -21,7 +21,8 @@ app.get('/', (req, res) => {
 
 // Rutas para usuarios
 // GET: Obtener todos los usuarios
-app.get('/api/usuarios', async (req, res) => {
+app.get('/api/usuarios', async (res) => {
+  
   try {
     const { rows } = await pool.query('SELECT * FROM usuarios');
     res.json(rows);
@@ -63,7 +64,7 @@ app.post('/api/usuarios', async (req, res) => {
 
 // Rutas para candidatos
 // GET: Obtener todos los candidatos
-app.get('/api/candidatos', async (req, res) => {
+app.get('/api/candidatos', async (res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM candidatos ORDER BY id_candidato ASC');
     res.status(200).json(rows);
@@ -150,28 +151,8 @@ app.get('/api/estadisticas', async (req, res) => {
   }
 });
 
-// GET: Obtener estadísticas por región (si se implementa en el futuro)
-app.get('/api/estadisticas/region', async (req, res) => {
-  // Por ahora devolvemos todos los datos
-  const query = `
-    SELECT c.id_candidato, c.nombre, COUNT(v.id_voto) as total_votos
-    FROM candidatos c
-    LEFT JOIN votaciones v ON c.id_candidato = v.id_candidato
-    GROUP BY c.id_candidato
-    ORDER BY total_votos DESC
-  `;
-
-  try {
-    const { rows } = await pool.query(query);
-    res.status(200).json(rows);
-  } catch (err) {
-    console.error('Error al obtener estadísticas por región:', err);
-    res.status(500).json({ error: 'Error al obtener estadísticas por región' });
-  }
-});
-
 // GET: Obtener top líderes
-app.get('/api/lideres', async (req, res) => {
+app.get('/api/lideres', async (res) => {
   const query = `
     SELECT c.id_candidato, c.nombre, 
            COUNT(v.id_voto) as votos_validos,
