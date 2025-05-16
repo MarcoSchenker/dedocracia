@@ -15,7 +15,7 @@ app.options('*', cors()); // Permitir preflight requests
 app.use(express.json()); // Permite manejar el cuerpo de las peticiones como JSON
 
 // Ruta principal
-app.get('/', (req, res) => {
+app.get('/', (res) => {
     res.send('API funcionando');
 });
 
