@@ -151,9 +151,7 @@ app.get('/api/estadisticas', async (req, res) => {
 });
 
 // GET: Obtener estadísticas por región (si se implementa en el futuro)
-app.get('/api/estadisticas/region/:region', async (req, res) => {
-  const { region } = req.params;
-
+app.get('/api/estadisticas/region', async (req, res) => {
   // Por ahora devolvemos todos los datos
   const query = `
     SELECT c.id_candidato, c.nombre, COUNT(v.id_voto) as total_votos
