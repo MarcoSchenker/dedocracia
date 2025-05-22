@@ -1,16 +1,17 @@
 const mqtt = require('mqtt');
 const pool = require('./db');
-require('dotenv').config();
 
-// Configuración de MQTT
-const MQTT_BROKER = process.env.MQTT_BROKER;
-const MQTT_PORT = process.env.MQTT_PORT || 1883;
+// Configuración hardcodeada para MQTT
+const MQTT_BROKER = 'mqtt://34.197.123.11:1883';
+const MQTT_PORT = 1883;
+const MQTT_USER = '';
+const MQTT_PASSWORD = '';
 
 const MQTT_OPTIONS = {
   port: MQTT_PORT,
   clientId: 'dedocracia_' + Math.random().toString(16).substr(2, 8),
-  username: process.env.MQTT_USER,
-  password: process.env.MQTT_PASSWORD,
+  username: MQTT_USER,
+  password: MQTT_PASSWORD,
   keepalive: 60,
   reconnectPeriod: 1000
 };

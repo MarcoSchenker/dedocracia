@@ -1,12 +1,10 @@
 const express = require('express');
 const pool = require('./db');
 const cors = require('cors');
-require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-// Si estás en la instancia pública de AWS, asegúrate de escuchar en todas las interfaces
-const HOST = process.env.HOST || '0.0.0.0';
+const PORT = 3000;
+const HOST = '0.0.0.0'; // Escucha en todas las interfaces
 
 // Configuración de CORS para permitir peticiones desde el frontend
 app.use(cors());
