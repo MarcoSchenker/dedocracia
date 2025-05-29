@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Users, Activity, TrendingUp, TrendingDown, Plus } from 'lucide-react';
+import { Users, Map, PieChart, Activity, TrendingUp, TrendingDown, Plus, Trash2 } from 'lucide-react';
 
 // API base URL from environment variables or fallback to localhost
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://34.197.123.11:3000';
@@ -12,6 +12,7 @@ const Dashboard = () => {
     const [activeSection, setActiveSection] = useState('dashboard');
     const [nuevoNombre, setNuevoNombre] = useState('');
     const [mensaje, setMensaje] = useState('');
+    const [nuevaDescripcion, setNuevaDescripcion] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -70,20 +71,6 @@ const Dashboard = () => {
             throw error;
         }
     };
-
-    // Función para obtener líderes
-    const fetchLideres = async () => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/lideres`);
-            if (!response.ok) throw new Error('Error en la respuesta del servidor');
-            const data = await response.json();
-            setLideres(data);
-        } catch (error) {
-            console.error('Error al obtener líderes:', error);
-            throw error;
-        }
-    };
-
     // Función para agregar candidato
     const agregarCandidato = async () => {
         if (!nuevoNombre.trim()) {
@@ -98,11 +85,15 @@ const Dashboard = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ nombre: nuevoNombre }),
+                body: JSON.stringify({
+                    nombre: nuevoNombre,
+                    descripcion: nuevaDescripcion
+                }),
             });
 
             if (response.ok) {
                 setNuevoNombre('');
+                setNuevaDescripcion('');
                 setMensaje('Candidato agregado correctamente');
                 // Refrescar la lista de candidatos
                 fetchCandidatos();
@@ -114,6 +105,29 @@ const Dashboard = () => {
             }
         } catch (error) {
             console.error('Error al agregar candidato:', error);
+            setMensaje('Error al conectar con el servidor');
+        }
+    };
+
+    // Función para eliminar candidato
+    const eliminarCandidato = async (id) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/candidatos/${id}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                setMensaje('Candidato eliminado correctamente');
+                // Refrescar la lista de candidatos
+                fetchCandidatos();
+                fetchEstadisticas();
+                fetchLideres();
+            } else {
+                const error = await response.json();
+                setMensaje(`Error: ${error.error}`);
+            }
+        } catch (error) {
+            console.error('Error al eliminar candidato:', error);
             setMensaje('Error al conectar con el servidor');
         }
     };
@@ -243,7 +257,14 @@ const Dashboard = () => {
                                         value={nuevoNombre}
                                         onChange={(e) => setNuevoNombre(e.target.value)}
                                     />
-                                    <button className="btn-primary" onClick={agregarCandidato}>
+                                    <textarea
+                                        className="form-input mt-2"
+                                        placeholder="Descripción del candidato"
+                                        value={nuevaDescripcion}
+                                        onChange={(e) => setNuevaDescripcion(e.target.value)}
+                                        rows="3"
+                                    ></textarea>
+                                    <button className="btn-primary mt-2" onClick={agregarCandidato}>
                                         <Plus size={16} /> Agregar
                                     </button>
                                 </div>
@@ -256,6 +277,7 @@ const Dashboard = () => {
                                         <tr>
                                             <th>ID</th>
                                             <th>Nombre</th>
+                                            <th>Acciones</th>
                                         </tr>
                                         </thead>
                                         <tbody>
@@ -263,6 +285,14 @@ const Dashboard = () => {
                                             <tr key={candidato.id_candidato}>
                                                 <td>{candidato.id_candidato}</td>
                                                 <td>{candidato.nombre}</td>
+                                                <td>
+                                                    <button
+                                                        className="btn-danger"
+                                                        onClick={() => eliminarCandidato(candidato.id_candidato)}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </td>
                                             </tr>
                                         ))}
                                         </tbody>
@@ -302,11 +332,24 @@ const Dashboard = () => {
                         </div>
                     </>
                 );
-            case 'lideres':
+            case 'candidatos':
                 return (
                     <div className="card">
-                        <div className="card-title">Información de Líderes</div>
-                        <p className="p-4">Sección de líderes en desarrollo.</p>
+                        <div className="card-title">Información de Candidatos</div>
+                        <div className="p-4">
+                            {candidatos.length > 0 ? (
+                                <div className="candidatos-grid">
+                                    {candidatos.map((candidato) => (
+                                        <div className="candidato-card" key={candidato.id_candidato}>
+                                            <h3>{candidato.nombre}</h3>
+                                            <p>{candidato.descripcion || 'Sin descripción'}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p>No hay candidatos registrados.</p>
+                            )}
+                        </div>
                     </div>
                 );
             default:
@@ -335,6 +378,15 @@ const Dashboard = () => {
                                 <Activity size={24} />
                             </div>
                             <div className="sidebar-item-label">Dashboard</div>
+                        </div>
+                        <div
+                            className={`sidebar-item ${activeSection === 'candidatos' ? 'active' : ''}`}
+                            onClick={() => setActiveSection('candidatos')}
+                        >
+                            <div className="sidebar-item-icon">
+                                <PieChart size={24} />
+                            </div>
+                            <div className="sidebar-item-label">Candidatos</div>
                         </div>
                         <div
                             className={`sidebar-item ${activeSection === 'lideres' ? 'active' : ''}`}

@@ -74,27 +74,45 @@ app.get('/api/candidatos', async (req, res) => {
 
 // POST: Agregar un nuevo candidato
 app.post('/api/candidatos', async (req, res) => {
-  const { nombre } = req.body;
+    const { nombre, descripcion } = req.body;
 
-  if (!nombre || nombre.trim() === '') {
-    return res.status(400).json({ error: 'El nombre del candidato es requerido' });
-  }
+    if (!nombre || nombre.trim() === '') {
+        return res.status(400).json({ error: 'El nombre del candidato es requerido' });
+    }
 
-  try {
-    const { rows } = await pool.query(
-      'INSERT INTO candidatos (nombre) VALUES ($1) RETURNING id_candidato',
-      [nombre]
-    );
-    
-    res.status(201).json({
-      mensaje: 'Candidato agregado correctamente',
-      id_candidato: rows[0].id_candidato
-    });
-  } catch (err) {
-    console.error('Error al agregar candidato:', err);
-    res.status(500).json({ error: 'Error al agregar candidato' });
-  }
+    try {
+        const { rows } = await pool.query(
+            'INSERT INTO candidatos (nombre, descripcion) VALUES ($1, $2) RETURNING *',
+            [nombre, descripcion || '']
+        );
+        
+        res.status(201).json({
+            mensaje: 'Candidato agregado correctamente',
+            id_candidato: rows[0].id_candidato
+        });
+    } catch (err) {
+        console.error('Error al agregar candidato:', err);
+        res.status(500).json({ error: 'Error al agregar candidato' });
+    }
 });
+
+// DELETE: Eliminar un candidato
+app.delete('/api/candidatos/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const result = await pool.query('DELETE FROM candidatos WHERE id_candidato = $1 RETURNING *', [id]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Candidato no encontrado' });
+        }
+
+        res.status(200).json({ mensaje: 'Candidato eliminado correctamente' });
+    } catch (err) {
+        console.error('Error al eliminar candidato:', err);
+        res.status(500).json({ error: 'Error al eliminar candidato' });
+    }
+}); 
 
 // Rutas para votaciones
 // POST: Registrar un voto
@@ -146,31 +164,6 @@ app.get('/api/estadisticas', async (req, res) => {
   } catch (err) {
     console.error('Error al obtener estadísticas:', err);
     res.status(500).json({ error: 'Error al obtener estadísticas' });
-  }
-});
-
-// GET: Obtener top líderes
-app.get('/api/lideres', async (req, res) => {
-  const query = `
-    SELECT c.id_candidato, c.nombre, 
-           COUNT(v.id_voto) as votos_validos,
-           (SELECT COUNT(*) FROM votaciones v2 WHERE v2.id_candidato = c.id_candidato) as votos_totales,
-           CASE 
-              WHEN c.id_candidato % 2 = 0 THEN 'down'
-              ELSE 'up'
-           END as tendencia
-    FROM candidatos c
-    LEFT JOIN votaciones v ON c.id_candidato = v.id_candidato
-    GROUP BY c.id_candidato
-    ORDER BY votos_validos DESC
-  `;
-
-  try {
-    const { rows } = await pool.query(query);
-    res.status(200).json(rows);
-  } catch (err) {
-    console.error('Error al obtener líderes:', err);
-    res.status(500).json({ error: 'Error al obtener líderes' });
   }
 });
 
