@@ -125,12 +125,6 @@ body {
   color: var(--primary-color);
 }
 
-/* Tabla de líderes */
-.leaders-table, .candidates-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
 .leaders-table th, .leaders-table td,
 .candidates-table th, .candidates-table td {
   padding: 12px;

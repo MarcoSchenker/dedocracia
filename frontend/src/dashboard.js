@@ -355,13 +355,6 @@ const Dashboard = () => {
                             </div>
                             <div className="sidebar-item-label">Candidatos</div>
                         </div>
-                        <div
-                        >
-                            <div className="sidebar-item-icon">
-                                <Users size={24} />
-                            </div>
-                            <div className="sidebar-item-label">Líderes</div>
-                        </div>
                     </div>
                 </div>
 
