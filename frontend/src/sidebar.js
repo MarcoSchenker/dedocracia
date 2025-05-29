@@ -9,11 +9,6 @@ const Sidebar = ({ activeSection, onSectionChange }) => {
             icon: <Activity size={24} />
         },
         {
-            id: 'lideres',
-            name: 'Líderes',
-            icon: <Users size={24} />
-        },
-        {
             id: 'estadisticas',
             name: 'Estadísticas',
             icon: <PieChart size={24} />

@@ -8,7 +8,6 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://34.197.123.11:3000
 const Dashboard = () => {
     const [candidatos, setCandidatos] = useState([]);
     const [estadisticas, setEstadisticas] = useState([]);
-    const [lideres, setLideres] = useState([]);
     const [activeSection, setActiveSection] = useState('dashboard');
     const [nuevoNombre, setNuevoNombre] = useState('');
     const [mensaje, setMensaje] = useState('');
@@ -24,7 +23,6 @@ const Dashboard = () => {
                 await Promise.all([
                     fetchCandidatos(),
                     fetchEstadisticas(),
-                    fetchLideres()
                 ]);
                 setError(null);
             } catch (err) {
@@ -98,7 +96,7 @@ const Dashboard = () => {
                 // Refrescar la lista de candidatos
                 fetchCandidatos();
                 fetchEstadisticas();
-                fetchLideres();
+            
             } else {
                 const error = await response.json();
                 setMensaje(`Error: ${error.error}`);
@@ -121,7 +119,6 @@ const Dashboard = () => {
                 // Refrescar la lista de candidatos
                 fetchCandidatos();
                 fetchEstadisticas();
-                fetchLideres();
             } else {
                 const error = await response.json();
                 setMensaje(`Error: ${error.error}`);
@@ -300,36 +297,6 @@ const Dashboard = () => {
                                 </div>
                             </div>
                         </div>
-
-                        <div className="card mt-4">
-                            <div className="card-title">Top Líderes</div>
-                            <table className="leaders-table">
-                                <thead>
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th>Comuna</th>
-                                    <th>Votos Totales</th>
-                                    <th>Actualización</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {lideres.map((lider) => (
-                                    <tr key={lider.id_candidato}>
-                                        <td>{lider.nombre}</td>
-                                        <td>{lider.id_candidato < 4 ? lider.id_candidato : 1}</td>
-                                        <td>{lider.votos_totales ? lider.votos_totales.toLocaleString() : '0'}</td>
-                                        <td>
-                                            {lider.tendencia === 'down' ? (
-                                                <TrendingDown className="trend-down" size={18} />
-                                            ) : (
-                                                <TrendingUp className="trend-up" size={18} />
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                                </tbody>
-                            </table>
-                        </div>
                     </>
                 );
             case 'candidatos':
@@ -389,8 +356,6 @@ const Dashboard = () => {
                             <div className="sidebar-item-label">Candidatos</div>
                         </div>
                         <div
-                            className={`sidebar-item ${activeSection === 'lideres' ? 'active' : ''}`}
-                            onClick={() => setActiveSection('lideres')}
                         >
                             <div className="sidebar-item-icon">
                                 <Users size={24} />
