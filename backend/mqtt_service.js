@@ -41,6 +41,13 @@ client.on('connect', () => {
       console.log('✅ Suscrito a dedocracia/voto');
     }
   });
+  
+  client.subscribe('dedocracia/solicitud', (err) => {
+    if (!err) console.log('✅ Suscrito a dedocracia/solicitud');
+  });
+
+  // Publicar lista de candidatos al conectar
+  publicarCandidatos();
 });
 
 // Manejar errores
@@ -64,6 +71,23 @@ client.on('message', async (topic, message) => {
         await registrarVoto(data.id_huella, data.id_candidato);
         break;
         
+      case 'dedocracia/solicitud':
+        const solicitud = data.accion;
+        if (solicitud === 'obtener_candidatos') {
+          await publicarCandidatos();
+        }
+        break;
+        
+      case 'dedocracia/confirmacion':
+        // Manejar confirmaciones si es necesario
+        console.log('✅ Confirmación recibida:', data);
+        break;
+        
+      case 'dedocracia/candidatos':
+        // Manejar lista de candidatos si es necesario
+        console.log('📋 Lista de candidatos recibida:', data);
+        break;
+        
       default:
         console.log(`⚠️ Tópico no manejado: ${topic}`);
     }
@@ -85,7 +109,6 @@ async function registrarUsuario(id_huella) {
     
     if (checkResult.rows.length > 0) {
       console.log(`👤 Usuario con huella ID ${id_huella} ya existe.`);
-      // Enviar confirmación
       client.publish('dedocracia/confirmacion', JSON.stringify({
         status: 'exists',
         id_huella: id_huella,
@@ -94,15 +117,12 @@ async function registrarUsuario(id_huella) {
       return;
     }
     
-    // Registrar nuevo usuario
     const result = await pool.query(
       'INSERT INTO usuarios(id_huella) VALUES($1) RETURNING id_usuario',
       [id_huella]
     );
     
     console.log(`✅ Usuario registrado con huella ID ${id_huella} y usuario ID ${result.rows[0].id_usuario}`);
-    
-    // Enviar confirmación
     client.publish('dedocracia/confirmacion', JSON.stringify({
       status: 'success',
       id_huella: id_huella,
@@ -111,8 +131,6 @@ async function registrarUsuario(id_huella) {
     
   } catch (error) {
     console.error('❌ Error registrando usuario:', error);
-    
-    // Enviar error
     client.publish('dedocracia/confirmacion', JSON.stringify({
       status: 'error',
       id_huella: id_huella,
@@ -126,7 +144,6 @@ async function registrarVoto(id_huella, id_candidato) {
   console.log(`⏳ Registrando voto: huella ID ${id_huella} por candidato ID ${id_candidato}`);
   
   try {
-    // Obtener id_usuario a partir de id_huella
     const userResult = await pool.query(
       'SELECT id_usuario FROM usuarios WHERE id_huella = $1',
       [id_huella]
@@ -138,7 +155,6 @@ async function registrarVoto(id_huella, id_candidato) {
     
     const id_usuario = userResult.rows[0].id_usuario;
     
-    // Verificar si el usuario ya votó
     const checkResult = await pool.query(
       'SELECT * FROM votaciones WHERE id_usuario = $1',
       [id_usuario]
@@ -146,8 +162,6 @@ async function registrarVoto(id_huella, id_candidato) {
     
     if (checkResult.rows.length > 0) {
       console.log(`⚠️ El usuario con ID ${id_usuario} ya ha votado anteriormente.`);
-      
-      // Enviar confirmación de voto duplicado
       client.publish('dedocracia/confirmacion', JSON.stringify({
         status: 'duplicate',
         id_huella: id_huella,
@@ -156,15 +170,12 @@ async function registrarVoto(id_huella, id_candidato) {
       return;
     }
     
-    // Registrar el voto
     const result = await pool.query(
       'INSERT INTO votaciones (id_usuario, id_candidato) VALUES ($1, $2) RETURNING id_voto',
       [id_usuario, id_candidato]
     );
     
     console.log(`✅ Voto registrado: ID ${result.rows[0].id_voto} para usuario ${id_usuario} por candidato ${id_candidato}`);
-    
-    // Enviar confirmación
     client.publish('dedocracia/confirmacion', JSON.stringify({
       status: 'success',
       id_huella: id_huella,
@@ -174,14 +185,48 @@ async function registrarVoto(id_huella, id_candidato) {
     
   } catch (error) {
     console.error('❌ Error registrando voto:', error);
-    
-    // Enviar error
     client.publish('dedocracia/confirmacion', JSON.stringify({
       status: 'error',
       id_huella: id_huella,
       id_candidato: id_candidato,
       message: error.message
     }));
+  }
+}
+
+// Publicar los 2 candidatos actuales vía MQTT
+async function publicarCandidatos() {
+  try {
+    const result = await pool.query('SELECT id_candidato AS id, nombre FROM candidatos ORDER BY id_candidato ASC LIMIT 2');
+    
+    if (result.rows.length === 2) {
+      const candidatos = {
+        candidatos: result.rows
+      };
+      const mensaje = JSON.stringify(candidatos);
+      client.publish('dedocracia/candidatos', mensaje);
+      console.log('📤 Candidatos enviados por MQTT:', mensaje);
+    } else {
+      console.warn('⚠️ No hay exactamente 2 candidatos en la base de datos');
+    }
+  } catch (error) {
+    console.error('❌ Error al publicar candidatos:', error);
+  }
+}
+
+// Función para reconectar el cliente MQTT
+function reconnect() {
+  while (!client.connected()) {
+    const clientId = 'ESP32Client-' + Math.random().toString(16).substr(2, 8);
+    if (client.connect(clientId)) {
+      client.subscribe('dedocracia/confirmacion');
+      client.subscribe('dedocracia/candidatos');
+      
+      // Solicitar candidatos al reconectar
+      client.publish('dedocracia/solicitud', JSON.stringify({ accion: 'obtener_candidatos' }));
+    } else {
+      setTimeout(reconnect, 5000);
+    }
   }
 }
 
