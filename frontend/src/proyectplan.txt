@@ -16,3 +16,8 @@ mosquitto  707       mosquitto    6u  IPv6   7206      0t0  TCP *:1883 (LISTEN)
 sshd       893            root    3u  IPv6   6025      0t0  TCP *:22 (LISTEN)
 node\x20/ 1817          ubuntu   26u  IPv4  13286      0t0  TCP *:3001 (LISTEN)
 node\x20/ 1914          ubuntu   26u  IPv4  14695      0t0  TCP *:3000 (LISTEN)
+
+Para iniciar todo el proyecto:
+pm2 start ~/dedocracia/backend/server.js --name backend
+pm2 start ~/dedocracia/backend/mqtt_service.js --name mqtt_service
+pm2 serve ~/dedocracia/frontend/build 3001 --name frontend

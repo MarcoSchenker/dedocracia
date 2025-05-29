@@ -16,6 +16,10 @@ app.use(express.json()); // Permite manejar el cuerpo de las peticiones como JSO
 app.get('/', (req, res) => {
     res.send('API funcionando');
 });
+// Endpoint vacío para evitar errores con solicitudes de líderes
+app.get('/api/lideres', (req, res) => {
+  res.status(200).json([]);
+});
 
 // Rutas para usuarios
 // GET: Obtener todos los usuarios
