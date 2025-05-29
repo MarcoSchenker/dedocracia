@@ -357,7 +357,6 @@ const Dashboard = () => {
                         </div>
                     </div>
                 </div>
-
                 <div className="dashboard">
                     <div className="dashboard-header">
                         <h2 className="dashboard-title">DeDoCracia</h2>
