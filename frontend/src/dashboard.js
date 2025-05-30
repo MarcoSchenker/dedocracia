@@ -272,15 +272,13 @@ const Dashboard = () => {
                                     <table className="candidates-table">
                                         <thead>
                                         <tr>
-                                            <th>ID</th>
-                                            <th>Nombre</th>
-                                            <th>Acciones</th>
+                                            <th style={{width: '80%'}}>Nombre</th>
+                                            <th style={{width: '20%'}}>Acciones</th>
                                         </tr>
                                         </thead>
                                         <tbody>
                                         {candidatos.map((candidato) => (
                                             <tr key={candidato.id_candidato}>
-                                                <td>{candidato.id_candidato}</td>
                                                 <td>{candidato.nombre}</td>
                                                 <td>
                                                     <button
