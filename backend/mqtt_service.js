@@ -197,9 +197,10 @@ async function registrarVoto(id_huella, id_candidato) {
 // Publicar los 2 candidatos actuales vía MQTT
 async function publicarCandidatos() {
   try {
-    const result = await pool.query('SELECT id_candidato AS id, nombre FROM candidatos ORDER BY id_candidato ASC LIMIT 2');
+    // Enviar todos los candidatos disponibles (sin límite)
+    const result = await pool.query('SELECT id_candidato AS id, nombre FROM candidatos ORDER BY id_candidato ASC');
     
-    if (result.rows.length === 2) {
+    if (result.rows.length >= 2) {
       const candidatos = {
         candidatos: result.rows
       };
@@ -207,7 +208,7 @@ async function publicarCandidatos() {
       client.publish('dedocracia/candidatos', mensaje);
       console.log('📤 Candidatos enviados por MQTT:', mensaje);
     } else {
-      console.warn('⚠️ No hay exactamente 2 candidatos en la base de datos');
+      console.warn('⚠️ No hay suficientes candidatos en la base de datos');
     }
   } catch (error) {
     console.error('❌ Error al publicar candidatos:', error);
