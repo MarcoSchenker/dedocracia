@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Users, Map, PieChart, Activity, TrendingUp, TrendingDown, Plus, Trash2 } from 'lucide-react';
+import { PieChart, Activity, Plus, Trash2 } from 'lucide-react';
 
 // API base URL from environment variables or fallback to localhost
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://34.197.123.11:3000';
@@ -14,6 +14,9 @@ const Dashboard = () => {
     const [nuevaDescripcion, setNuevaDescripcion] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [votacionFinalizada, setVotacionFinalizada] = useState(false);
+    const [ganador, setGanador] = useState(null);
+    const [finalizandoVotacion, setFinalizandoVotacion] = useState(false);
 
     // Cargar datos
     useEffect(() => {
@@ -129,6 +132,40 @@ const Dashboard = () => {
         }
     };
 
+    // Función para finalizar votación
+    const finalizarVotacion = async () => {
+        if (!window.confirm('¿Está seguro de que desea finalizar la votación? Esta acción no se puede deshacer.')) {
+            return;
+        }
+
+        setFinalizandoVotacion(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/finalizar-votacion`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                const resultado = await response.json();
+                setVotacionFinalizada(true);
+                setGanador(resultado.ganador);
+                setEstadisticas(resultado.estadisticas);
+                setMensaje(`Votación finalizada. Ganador: ${resultado.ganador.nombre} con ${resultado.ganador.votos} votos`);
+                console.log('🏆 Resultado de la votación:', resultado);
+            } else {
+                const error = await response.json();
+                setMensaje(`Error al finalizar votación: ${error.error}`);
+            }
+        } catch (error) {
+            console.error('Error al finalizar votación:', error);
+            setMensaje('Error al conectar con el servidor para finalizar');
+        } finally {
+            setFinalizandoVotacion(false);
+        }
+    };
+
     // Comprobar si se está cargando o hay error
     if (loading && candidatos.length === 0) {
         return (
@@ -205,11 +242,31 @@ const Dashboard = () => {
                 return (
                     <>
                         <div className="dashboard-grid">
+                            {votacionFinalizada && ganador && (
+                                <div className="card winner-card">
+                                    <div className="card-title">🏆 GANADOR DE LA VOTACIÓN</div>
+                                    <div className="winner-info">
+                                        <h2 className="winner-name">{ganador.nombre}</h2>
+                                        <p className="winner-votes">{ganador.votos} votos</p>
+                                        <div className="winner-message">¡Felicitaciones al ganador!</div>
+                                    </div>
+                                </div>
+                            )}
+                            
                             <div className="card">
                                 <div className="card-title">Información Estadística</div>
                                 <div className="stats-container">
                                     <div className="stats-header">
                                         <div className="stats-title">Región Austral</div>
+                                        {!votacionFinalizada && (
+                                            <button 
+                                                className="btn-finalizar"
+                                                onClick={finalizarVotacion}
+                                                disabled={finalizandoVotacion}
+                                            >
+                                                {finalizandoVotacion ? 'Finalizando...' : 'Finalizar Votación'}
+                                            </button>
+                                        )}
                                     </div>
                                     <div className="stats-chart">
                                         <ResponsiveContainer width="100%" height={300}>

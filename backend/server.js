@@ -1,10 +1,33 @@
 const express = require('express');
 const pool = require('./db');
 const cors = require('cors');
+const mqtt = require('mqtt');
 
 const app = express();
 const PORT = 3000;
 const HOST = '0.0.0.0'; // Escucha en todas las interfaces
+
+// Configuración de MQTT para poder comunicarse con el ESP32
+const MQTT_BROKER = 'mqtt://34.197.123.11:1883';
+let mqttClient;
+
+// Inicializar conexión MQTT
+function initMQTT() {
+  mqttClient = mqtt.connect(MQTT_BROKER, {
+    clientId: 'server_' + Math.random().toString(16).substr(2, 8)
+  });
+
+  mqttClient.on('connect', () => {
+    console.log('🚀 Servidor conectado a MQTT broker');
+  });
+
+  mqttClient.on('error', (error) => {
+    console.error('❌ Error MQTT en servidor:', error);
+  });
+}
+
+// Inicializar MQTT
+initMQTT();
 
 // Configuración de CORS para permitir peticiones desde el frontend
 app.use(cors());
@@ -190,6 +213,70 @@ app.post('/api/autenticar', async (req, res) => {
   } catch (err) {
     console.error('Error al autenticar usuario:', err);
     res.status(500).json({ error: 'Error al autenticar usuario' });
+  }
+});
+
+// Finalizar votación y obtener ganador
+app.post('/api/finalizar-votacion', async (req, res) => {
+  try {
+    console.log('🏁 Iniciando finalización de votación...');
+    
+    // Obtener el ganador con más votos
+    const ganadorResult = await pool.query(`
+      SELECT c.id_candidato, c.nombre, COUNT(v.id_voto) as total_votos
+      FROM candidatos c
+      LEFT JOIN votaciones v ON c.id_candidato = v.id_candidato
+      GROUP BY c.id_candidato, c.nombre
+      ORDER BY total_votos DESC, c.nombre ASC
+      LIMIT 1
+    `);
+    
+    // Obtener estadísticas completas
+    const estadisticasResult = await pool.query(`
+      SELECT c.id_candidato, c.nombre, COUNT(v.id_voto) as total_votos
+      FROM candidatos c
+      LEFT JOIN votaciones v ON c.id_candidato = v.id_candidato
+      GROUP BY c.id_candidato, c.nombre
+      ORDER BY total_votos DESC, c.nombre ASC
+    `);
+    
+    // Obtener total de votantes únicos
+    const totalVotantesResult = await pool.query('SELECT COUNT(DISTINCT id_usuario) as total FROM votaciones');
+    const totalVotantes = parseInt(totalVotantesResult.rows[0].total) || 0;
+    
+    if (ganadorResult.rows.length > 0) {
+      const ganador = ganadorResult.rows[0];
+      
+      const resultadoFinal = {
+        ganador: {
+          nombre: ganador.nombre,
+          id: ganador.id_candidato,
+          votos: parseInt(ganador.total_votos)
+        },
+        estadisticas: estadisticasResult.rows.map(row => ({
+          nombre: row.nombre,
+          id: row.id_candidato,
+          votos: parseInt(row.total_votos)
+        })),
+        total_votantes: totalVotantes,
+        finalizada: true,
+        fecha_finalizacion: new Date().toISOString()
+      };
+      
+      // Enviar resultado al ESP32 vía MQTT
+      if (mqttClient && mqttClient.connected) {
+        mqttClient.publish('dedocracia/resultado', JSON.stringify(resultadoFinal));
+        console.log('📤 Resultado enviado al ESP32 vía MQTT');
+      }
+      
+      console.log('🏆 Votación finalizada. Ganador:', ganador.nombre, 'con', ganador.total_votos, 'votos');
+      res.status(200).json(resultadoFinal);
+    } else {
+      res.status(404).json({ error: 'No se encontraron candidatos' });
+    }
+  } catch (err) {
+    console.error('❌ Error al finalizar votación:', err);
+    res.status(500).json({ error: 'Error al finalizar votación' });
   }
 });
 

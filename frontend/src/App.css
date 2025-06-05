@@ -361,3 +361,72 @@ textarea.form-input {
   font-size: 14px;
   resize: vertical;
 }
+
+/* Estilos para ganador */
+.winner-card {
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+  border: 3px solid #ffd700;
+  color: #333;
+  text-align: center;
+}
+
+.winner-card .card-title {
+  color: #d4af37;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.winner-info {
+  padding: 20px;
+}
+
+.winner-name {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #b8860b;
+  margin-bottom: 10px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.winner-votes {
+  font-size: 1.5rem;
+  color: #333;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.winner-message {
+  font-size: 1.1rem;
+  color: #555;
+  font-style: italic;
+}
+
+/* Botón finalizar votación */
+.btn-finalizar {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+  font-weight: 600;
+}
+
+.btn-finalizar:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.btn-finalizar:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Responsive para dashboard grid */
+@media (max-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}

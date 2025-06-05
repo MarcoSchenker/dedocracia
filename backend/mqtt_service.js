@@ -46,6 +46,10 @@ client.on('connect', () => {
     if (!err) console.log('✅ Suscrito a dedocracia/solicitud');
   });
 
+  client.subscribe('dedocracia/finalizacion', (err) => {
+    if (!err) console.log('✅ Suscrito a dedocracia/finalizacion');
+  });
+
   // Publicar lista de candidatos al conectar
   publicarCandidatos();
 });
@@ -76,6 +80,10 @@ client.on('message', async (topic, message) => {
         if (solicitud === 'obtener_candidatos') {
           await publicarCandidatos();
         }
+        break;
+        
+      case 'dedocracia/finalizacion':
+        await manejarFinalizacion(data);
         break;
         
       case 'dedocracia/confirmacion':
@@ -112,7 +120,8 @@ async function registrarUsuario(id_huella) {
       client.publish('dedocracia/confirmacion', JSON.stringify({
         status: 'exists',
         id_huella: id_huella,
-        id_usuario: checkResult.rows[0].id_usuario
+        id_usuario: checkResult.rows[0].id_usuario,
+        message: 'Usuario ya registrado'
       }));
       return;
     }
@@ -126,7 +135,8 @@ async function registrarUsuario(id_huella) {
     client.publish('dedocracia/confirmacion', JSON.stringify({
       status: 'success',
       id_huella: id_huella,
-      id_usuario: result.rows[0].id_usuario
+      id_usuario: result.rows[0].id_usuario,
+      message: 'Usuario registrado exitosamente'
     }));
     
   } catch (error) {
@@ -134,7 +144,7 @@ async function registrarUsuario(id_huella) {
     client.publish('dedocracia/confirmacion', JSON.stringify({
       status: 'error',
       id_huella: id_huella,
-      message: error.message
+      message: 'Error en base de datos: ' + error.message
     }));
   }
 }
@@ -165,7 +175,8 @@ async function registrarVoto(id_huella, id_candidato) {
       client.publish('dedocracia/confirmacion', JSON.stringify({
         status: 'duplicate',
         id_huella: id_huella,
-        id_usuario: id_usuario
+        id_usuario: id_usuario,
+        message: 'Usuario ya ha votado'
       }));
       return;
     }
@@ -180,7 +191,8 @@ async function registrarVoto(id_huella, id_candidato) {
       status: 'success',
       id_huella: id_huella,
       id_usuario: id_usuario,
-      id_voto: result.rows[0].id_voto
+      id_voto: result.rows[0].id_voto,
+      message: 'Voto registrado exitosamente'
     }));
     
   } catch (error) {
@@ -189,7 +201,7 @@ async function registrarVoto(id_huella, id_candidato) {
       status: 'error',
       id_huella: id_huella,
       id_candidato: id_candidato,
-      message: error.message
+      message: 'Error registrando voto: ' + error.message
     }));
   }
 }
@@ -212,6 +224,72 @@ async function publicarCandidatos() {
     }
   } catch (error) {
     console.error('❌ Error al publicar candidatos:', error);
+  }
+}
+
+// Manejar finalización de votación
+async function manejarFinalizacion(data) {
+  try {
+    console.log('🏁 Procesando finalización de votación...');
+    
+    // Obtener el ganador
+    const ganadorResult = await pool.query(`
+      SELECT c.id_candidato, c.nombre, COUNT(v.id_voto) as total_votos
+      FROM candidatos c
+      LEFT JOIN votaciones v ON c.id_candidato = v.id_candidato
+      GROUP BY c.id_candidato, c.nombre
+      ORDER BY total_votos DESC, c.nombre ASC
+      LIMIT 1
+    `);
+    
+    if (ganadorResult.rows.length > 0) {
+      const ganador = ganadorResult.rows[0];
+      
+      // Obtener estadísticas completas
+      const estadisticasResult = await pool.query(`
+        SELECT c.id_candidato, c.nombre, COUNT(v.id_voto) as total_votos
+        FROM candidatos c
+        LEFT JOIN votaciones v ON c.id_candidato = v.id_candidato
+        GROUP BY c.id_candidato, c.nombre
+        ORDER BY total_votos DESC, c.nombre ASC
+      `);
+      
+      const resultadoFinal = {
+        ganador: {
+          nombre: ganador.nombre,
+          id: ganador.id_candidato,
+          votos: parseInt(ganador.total_votos)
+        },
+        estadisticas: estadisticasResult.rows.map(row => ({
+          nombre: row.nombre,
+          id: row.id_candidato,
+          votos: parseInt(row.total_votos)
+        })),
+        total_votantes: await getTotalVotantes(),
+        finalizada: true
+      };
+      
+      // Publicar resultado en MQTT para ESP32
+      client.publish('dedocracia/resultado', JSON.stringify(resultadoFinal));
+      console.log('🏆 Resultado final enviado por MQTT:', JSON.stringify(resultadoFinal, null, 2));
+      
+      return resultadoFinal;
+    } else {
+      console.warn('⚠️ No se encontraron candidatos para determinar ganador');
+    }
+  } catch (error) {
+    console.error('❌ Error procesando finalización:', error);
+  }
+}
+
+// Obtener total de votantes
+async function getTotalVotantes() {
+  try {
+    const result = await pool.query('SELECT COUNT(DISTINCT id_usuario) as total FROM votaciones');
+    return parseInt(result.rows[0].total) || 0;
+  } catch (error) {
+    console.error('❌ Error obteniendo total de votantes:', error);
+    return 0;
   }
 }
 
