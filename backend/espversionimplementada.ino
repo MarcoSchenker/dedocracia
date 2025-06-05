@@ -99,11 +99,11 @@ void loop() {
     // Verificar si es huella existente
     if (finger.image2Tz() == FINGERPRINT_OK) {
       if (finger.fingerFastSearch() == FINGERPRINT_OK) {
-        // Huella existente encontrada - proceder a votar
+        // Huella existente encontrada - NO permitir votar
         id_huella_actual = finger.fingerID;
-        mostrar("Huella reconocida\nID: " + String(id_huella_actual));
-        delay(1000);
-        pedirVoto();
+        mostrar("Huella YA registrada\nID: " + String(id_huella_actual));
+        Serial.println("Huella ya registrada. No puede votar de nuevo.");
+        delay(2000);
       } else {
         // Huella nueva - registrar automáticamente
         if (proximo_id_huella <= 162) {
@@ -263,21 +263,25 @@ bool enrollFingerAuto(int id) {
   mostrar("Retire dedo...");
   delay(1500);
   
-  // Esperar a que retire el dedo
+  // Esperar a que retire el dedo (hasta 10 segundos)
   unsigned long t0 = millis();
   while (finger.getImage() != FINGERPRINT_NOFINGER) {
-    if (millis() - t0 > 5000) {
+    if (millis() - t0 > 10000) {  // 10 segundos máximo
       mostrar("Timeout retiro");
       return false;
     }
     delay(50);
   }
 
-  mostrar("Mismo dedo\notra vez...");
-  delay(1000);
+  mostrar("Mismo dedo\notra vez...\n10 segundos");
   
-  // Segunda imagen
+  // CAMBIADO: Segunda imagen con 10 segundos de timeout
+  unsigned long t1 = millis();
   while ((p = finger.getImage()) != FINGERPRINT_OK) {
+    if (millis() - t1 > 10000) { // 10 segundos timeout
+      mostrar("Tiempo agotado\npara segundo\ndedo");
+      return false;
+    }
     delay(50);
   }
 
@@ -339,8 +343,9 @@ void pedirVoto() {
     }
   }
 
-  mostrar("Elija candidato:\n[1] " + nombreCandidato1 + "\n[2] " + nombreCandidato2);
-  Serial.println("Esperando voto: 1=" + nombreCandidato1 + " o 2=" + nombreCandidato2);
+  // CAMBIADO: Colores de botones - AZUL para candidato 1, ROJO para candidato 2
+  mostrar("Elija candidato:\n[AZUL] " + nombreCandidato1 + "\n[ROJO] " + nombreCandidato2);
+  Serial.println("Esperando voto: AZUL=" + nombreCandidato1 + " o ROJO=" + nombreCandidato2);
 
   unsigned long tiempoInicio = millis();
   bool votado = false;
@@ -348,13 +353,13 @@ void pedirVoto() {
   // CAMBIADO: Reducido de 15000 a 10000 ms (10 segundos)
   while (!votado && millis() - tiempoInicio < 10000) {
     if (digitalRead(BOTON_1) == LOW) {
-      mostrar("Voto: " + nombreCandidato1);
+      mostrar("Voto: " + nombreCandidato1 + "\n(AZUL)");
       publicarVoto(id_huella_actual, idCandidato1);
       votado = true;
       delay(1000); // Evitar doble pulsación
     }
     if (digitalRead(BOTON_2) == LOW) {
-      mostrar("Voto: " + nombreCandidato2);
+      mostrar("Voto: " + nombreCandidato2 + "\n(ROJO)");
       publicarVoto(id_huella_actual, idCandidato2);
       votado = true;
       delay(1000); // Evitar doble pulsación

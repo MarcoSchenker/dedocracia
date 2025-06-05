@@ -306,115 +306,130 @@ const Dashboard = () => {
             case 'dashboard':
                 return (
                     <>
-                        <div className="dashboard-grid">
-                            {votacionFinalizada && ganador && (
-                                <div className="card winner-card">
-                                    <div className="card-title">🏆 GANADOR DE LA VOTACIÓN</div>
-                                    <div className="winner-info">
-                                        <h2 className="winner-name">{ganador.nombre}</h2>
-                                        <p className="winner-votes">{ganador.votos} votos</p>
-                                        <div className="winner-message">¡Felicitaciones al ganador!</div>
-                                    </div>
+                        {/* Mensaje del ganador si la votación está finalizada */}
+                        {votacionFinalizada && ganador && (
+                            <div className="card winner-card">
+                                <div className="card-title">🏆 GANADOR DE LA VOTACIÓN</div>
+                                <div className="winner-info">
+                                    <h2 className="winner-name">{ganador.nombre}</h2>
+                                    <p className="winner-votes">{ganador.votos} votos</p>
+                                    <div className="winner-message">¡Felicitaciones al ganador!</div>
                                 </div>
-                            )}
-                            
-                            <div className="card">
-                                <div className="card-title">Información Estadística</div>
-                                <div className="stats-container">
-                                    <div className="stats-header">
-                                        <div className="stats-title">Región Austral</div>
-                                        <div className="buttons-container">
-                                            {!votacionFinalizada ? (
-                                                <button 
-                                                    className="btn btn-danger"
-                                                    onClick={finalizarVotacion}
-                                                    disabled={finalizandoVotacion}
-                                                >
-                                                    {finalizandoVotacion ? 'Finalizando...' : 'Finalizar Votación'}
-                                                </button>
-                                            ) : (
-                                                <button 
-                                                    className="btn btn-primary"
-                                                    onClick={nuevaVotacion}
-                                                    disabled={loading}
-                                                >
-                                                    {loading ? 'Iniciando...' : 'Nueva Votación'}
-                                                </button>
-                                            )}
+                            </div>
+                        )}
+
+                        {/* Layout de dos columnas: Gráfico a la izquierda, Gestión a la derecha */}
+                        <div className="dashboard-content">
+                            {/* Columna izquierda - Gráfico más angosto */}
+                            <div className="dashboard-left">
+                                <div className="chart-container">
+                                    <div className="card">
+                                        <div className="card-title">Información Estadística</div>
+                                        <div className="stats-container">
+                                            <div className="stats-header">
+                                                <div className="stats-title">Región Austral</div>
+                                                <div className="buttons-container">
+                                                    {!votacionFinalizada ? (
+                                                        <button 
+                                                            className="btn btn-danger"
+                                                            onClick={finalizarVotacion}
+                                                            disabled={finalizandoVotacion}
+                                                        >
+                                                            {finalizandoVotacion ? 'Finalizando...' : 'Finalizar'}
+                                                        </button>
+                                                    ) : (
+                                                        <button 
+                                                            className="btn btn-primary"
+                                                            onClick={nuevaVotacion}
+                                                            disabled={loading}
+                                                        >
+                                                            {loading ? 'Iniciando...' : 'Nueva Votación'}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="stats-chart">
+                                                <ResponsiveContainer width="100%" height={300}>
+                                                    <BarChart data={estadisticas} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                                                        <XAxis 
+                                                            dataKey="nombre" 
+                                                            tick={{ fontSize: 12 }}
+                                                            interval={0}
+                                                        />
+                                                        <YAxis tick={{ fontSize: 12 }} />
+                                                        <Tooltip 
+                                                            contentStyle={{
+                                                                backgroundColor: 'white',
+                                                                border: '1px solid #e5e7eb',
+                                                                borderRadius: '8px',
+                                                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                                            }}
+                                                            formatter={(value, name) => [
+                                                                `${value} votos`,
+                                                                'Total'
+                                                            ]}
+                                                        />
+                                                        <Bar 
+                                                            dataKey="total_votos" 
+                                                            fill="#2052d3" 
+                                                            radius={[4, 4, 0, 0]}
+                                                        />
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                                {estadisticas.length === 0 && (
+                                                    <div className="chart-empty-state">
+                                                        <p>No hay datos de votación disponibles</p>
+                                                        <p className="text-sm text-light">Los votos aparecerán aquí cuando se registren</p>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="stats-chart">
-                                        <ResponsiveContainer width="100%" height={300}>
-                                            <BarChart data={estadisticas} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                                                <XAxis 
-                                                    dataKey="nombre" 
-                                                    tick={{ fontSize: 12 }}
-                                                    interval={0}
-                                                />
-                                                <YAxis tick={{ fontSize: 12 }} />
-                                                <Tooltip 
-                                                    contentStyle={{
-                                                        backgroundColor: 'white',
-                                                        border: '1px solid #e5e7eb',
-                                                        borderRadius: '8px',
-                                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                                                    }}
-                                                    formatter={(value, name) => [
-                                                        `${value} votos`,
-                                                        'Total'
-                                                    ]}
-                                                />
-                                                <Bar 
-                                                    dataKey="total_votos" 
-                                                    fill="#2052d3" 
-                                                    radius={[4, 4, 0, 0]}
-                                                />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                        {estadisticas.length === 0 && (
-                                            <div className="chart-empty-state">
-                                                <p>No hay datos de votación disponibles</p>
-                                                <p className="text-sm text-light">Los votos aparecerán aquí cuando se registren</p>
-                                            </div>
-                                        )}
+                                </div>
+                            </div>
+
+                            {/* Columna derecha - Gestión de usuarios */}
+                            <div className="dashboard-right">
+                                <div className="user-management">
+                                    <div className="card-title">Gestión de Candidatos</div>
+                                    <div className="form-container">
+                                        <div className="input-group">
+                                            <input
+                                                type="text"
+                                                className="form-input"
+                                                placeholder="Nombre del candidato"
+                                                value={nuevoNombre}
+                                                onChange={(e) => setNuevoNombre(e.target.value)}
+                                                disabled={votacionFinalizada}
+                                            />
+                                            <textarea
+                                                className="form-input mt-2"
+                                                placeholder="Descripción del candidato"
+                                                value={nuevaDescripcion}
+                                                onChange={(e) => setNuevaDescripcion(e.target.value)}
+                                                rows="3"
+                                                disabled={votacionFinalizada}
+                                            ></textarea>
+                                            <button 
+                                                className="btn-primary btn-large mt-2" 
+                                                onClick={agregarCandidato}
+                                                disabled={votacionFinalizada}
+                                                title={votacionFinalizada ? "No se pueden agregar candidatos después de finalizar" : "Agregar nuevo candidato"}
+                                            >
+                                                <Plus size={20} /> {votacionFinalizada ? 'Votación Finalizada' : 'Agregar Candidato'}
+                                            </button>
+                                        </div>
+                                        {mensaje && <div className={`message ${mensaje.includes('Error') ? 'error' : ''}`}>{mensaje}</div>}
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="card mt-4">
-                            <div className="card-title">Gestión de Candidatos</div>
-                            <div className="form-container">
-                                <div className="input-group">
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        placeholder="Nombre del candidato"
-                                        value={nuevoNombre}
-                                        onChange={(e) => setNuevoNombre(e.target.value)}
-                                        disabled={votacionFinalizada}
-                                    />
-                                    <textarea
-                                        className="form-input mt-2"
-                                        placeholder="Descripción del candidato"
-                                        value={nuevaDescripcion}
-                                        onChange={(e) => setNuevaDescripcion(e.target.value)}
-                                        rows="3"
-                                        disabled={votacionFinalizada}
-                                    ></textarea>
-                                    <button 
-                                        className="btn-primary mt-2" 
-                                        onClick={agregarCandidato}
-                                        disabled={votacionFinalizada}
-                                        title={votacionFinalizada ? "No se pueden agregar candidatos después de finalizar" : "Agregar nuevo candidato"}
-                                    >
-                                        <Plus size={16} /> {votacionFinalizada ? 'Votación Finalizada' : 'Agregar'}
-                                    </button>
-                                </div>
-                                {mensaje && <div className={`message ${mensaje.includes('Error') ? 'error' : ''}`}>{mensaje}</div>}
-
-                                <div className="candidates-list mt-4">
-                                    <h3>Candidatos Registrados ({candidatos.length})</h3>
+                        {/* Sección de candidatos - Ancho completo */}
+                        <div className="candidatos-section">
+                            <div className="card">
+                                <div className="card-title">Candidatos Registrados ({candidatos.length})</div>
+                                <div className="candidates-list">
                                     {candidatos.length > 0 ? (
                                         <table className="candidates-table">
                                             <thead>
@@ -561,12 +576,6 @@ const Dashboard = () => {
                     <div className="footer-section">
                         <strong>© 2025 DeDoCracia S.A.S.</strong>
                         <span>Sistema de Votación Electrónica Segura</span>
-                    </div>
-                    <div className="footer-section">
-                        <span>Estado: {votacionFinalizada ? 'Votación Finalizada' : 'Votación Activa'}</span>
-                        <span className="footer-stats">
-                            {candidatos.length} candidatos • {totalVotos} votos totales
-                        </span>
                     </div>
                 </div>
             </div>

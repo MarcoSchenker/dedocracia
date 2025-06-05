@@ -161,6 +161,57 @@ body {
   margin-top: 0.5rem;
 }
 
+/* Layout de dos columnas para dashboard */
+.dashboard-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.dashboard-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-right {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Gráfico más angosto */
+.chart-container {
+  width: 100%;
+  max-width: 100%;
+}
+
+.chart-container .card {
+  padding: 1.5rem;
+}
+
+/* Gestión de usuarios en la derecha */
+.user-management {
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--box-shadow);
+  padding: 2rem;
+  border: 1px solid var(--border-color);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  height: fit-content;
+}
+
+.user-management:hover {
+  box-shadow: var(--box-shadow-lg);
+  transform: translateY(-2px);
+}
+
+/* Sección de candidatos - ancho completo */
+.candidatos-section {
+  width: 100%;
+  grid-column: 1 / -1;
+  margin-top: 2rem;
+}
+
 /* Tarjetas modernas */
 .card {
   background: white;
@@ -291,8 +342,12 @@ body {
 }
 
 .btn-large {
-  padding: 1rem 2rem;
-  font-size: 1rem;
+  padding: 1.25rem 2.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* Formularios */
@@ -332,6 +387,7 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1.5rem;
   margin: 1.5rem 0;
+  width: 100%;
 }
 
 .candidato-card {
@@ -454,6 +510,296 @@ body {
   color: #92400e;
 }
 
+/* Estilos específicos para el dashboard */
+.stats-container {
+  width: 100%;
+}
+
+.stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.stats-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.buttons-container {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.stats-chart {
+  width: 100%;
+}
+
+.chart-empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-light);
+}
+
+.chart-empty-state p {
+  margin: 0.5rem 0;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+}
+
+.text-light {
+  color: var(--text-light);
+}
+
+/* Formulario en la gestión de usuarios */
+.form-container {
+  width: 100%;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
+.mt-4 {
+  margin-top: 1rem;
+}
+
+/* Mensajes */
+.message {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.message:not(.error) {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success-color);
+  border-left: 4px solid var(--success-color);
+}
+
+.message.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error-color);
+  border-left: 4px solid var(--error-color);
+}
+
+/* Tabla de candidatos */
+.candidates-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.candidates-table th,
+.candidates-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.candidates-table th {
+  background: var(--secondary-color);
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.candidate-info strong {
+  display: block;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 0.25rem;
+}
+
+.candidate-description {
+  font-size: 0.875rem;
+  color: var(--text-light);
+  line-height: 1.4;
+}
+
+.vote-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.vote-count {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.vote-percentage {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+/* Estado vacío */
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-light);
+}
+
+.empty-state p {
+  margin: 0.5rem 0;
+}
+
+/* Dashboard stats en el header */
+.dashboard-stats {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+/* Estado de conexión */
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.connection-status.conectado {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success-color);
+}
+
+.connection-status.conectando {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning-color);
+}
+
+.connection-status.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error-color);
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.connection-status.conectado .status-indicator {
+  background: var(--success-color);
+}
+
+.connection-status.conectando .status-indicator {
+  background: var(--warning-color);
+}
+
+.connection-status.error .status-indicator {
+  background: var(--error-color);
+}
+
+/* Footer */
+.footer {
+  background: var(--gradient-primary);
+  color: white;
+  padding: 1.5rem 2rem;
+  margin-top: auto;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.footer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: right;
+}
+
+.footer-section span {
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.footer-stats {
+  font-size: 0.75rem !important;
+  opacity: 0.7 !important;
+}
+
+/* Winner card */
+.winner-card {
+  background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
+  color: white;
+  margin-bottom: 2rem;
+}
+
+.winner-card .card-title {
+  color: white;
+  font-size: 1.75rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.winner-info {
+  text-align: center;
+}
+
+.winner-name {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+}
+
+.winner-votes {
+  font-size: 1.25rem;
+  opacity: 0.9;
+  margin-bottom: 1rem;
+}
+
+.winner-message {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .sidebar {
@@ -465,6 +811,11 @@ body {
   .dashboard {
     margin-left: 0;
     padding: 1rem;
+  }
+  
+  .dashboard-content {
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
   
   .stats-grid {
