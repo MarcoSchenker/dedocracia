@@ -280,6 +280,50 @@ app.post('/api/finalizar-votacion', async (req, res) => {
   }
 });
 
+// Resetear votación para empezar una nueva
+app.post('/api/nueva-votacion', async (req, res) => {
+  try {
+    console.log('🔄 Iniciando nueva votación - limpiando datos...');
+    
+    // Limpiar votos existentes
+    await pool.query('DELETE FROM votaciones');
+    console.log('✅ Votaciones eliminadas');
+    
+    // Limpiar candidatos existentes
+    await pool.query('DELETE FROM candidatos');
+    console.log('✅ Candidatos eliminados');
+    
+    // Limpiar usuarios existentes (huellas)
+    await pool.query('DELETE FROM usuarios');
+    console.log('✅ Usuarios eliminados');
+    
+    // Reiniciar las secuencias de IDs
+    await pool.query('ALTER SEQUENCE candidatos_id_candidato_seq RESTART WITH 1');
+    await pool.query('ALTER SEQUENCE usuarios_id_usuario_seq RESTART WITH 1');
+    await pool.query('ALTER SEQUENCE votaciones_id_voto_seq RESTART WITH 1');
+    console.log('✅ Secuencias de IDs reiniciadas');
+    
+    // Notificar al ESP32 que se reinició el sistema
+    if (mqttClient && mqttClient.connected) {
+      mqttClient.publish('dedocracia/reset', JSON.stringify({
+        mensaje: 'Sistema reiniciado - nueva votación iniciada',
+        timestamp: new Date().toISOString()
+      }));
+      console.log('📤 Notificación de reset enviada al ESP32');
+    }
+    
+    console.log('🎉 Nueva votación iniciada exitosamente');
+    res.status(200).json({ 
+      mensaje: 'Nueva votación iniciada. Todos los datos han sido limpiados.',
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (err) {
+    console.error('❌ Error al iniciar nueva votación:', err);
+    res.status(500).json({ error: 'Error al iniciar nueva votación' });
+  }
+});
+
 // Inicia el servidor (SOLO UNA VEZ AL FINAL DEL ARCHIVO)
 app.listen(PORT, HOST, () => {
   console.log(`🔥 Servidor escuchando en http://${HOST}:${PORT}`);

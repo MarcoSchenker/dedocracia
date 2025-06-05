@@ -17,6 +17,8 @@ const Dashboard = () => {
     const [votacionFinalizada, setVotacionFinalizada] = useState(false);
     const [ganador, setGanador] = useState(null);
     const [finalizandoVotacion, setFinalizandoVotacion] = useState(false);
+    const [estadoConexion, setEstadoConexion] = useState('conectado');
+    const [totalVotos, setTotalVotos] = useState(0);
 
     // Cargar datos
     useEffect(() => {
@@ -50,12 +52,15 @@ const Dashboard = () => {
     // Función para obtener candidatos
     const fetchCandidatos = async () => {
         try {
+            setEstadoConexion('conectando');
             const response = await fetch(`${API_BASE_URL}/api/candidatos`);
             if (!response.ok) throw new Error('Error en la respuesta del servidor');
             const data = await response.json();
             setCandidatos(data);
+            setEstadoConexion('conectado');
         } catch (error) {
             console.error('Error al obtener candidatos:', error);
+            setEstadoConexion('error');
             throw error;
         }
     };
@@ -63,17 +68,29 @@ const Dashboard = () => {
     // Función para obtener estadísticas
     const fetchEstadisticas = async () => {
         try {
+            setEstadoConexion('conectando');
             const response = await fetch(`${API_BASE_URL}/api/estadisticas`);
             if (!response.ok) throw new Error('Error en la respuesta del servidor');
             const data = await response.json();
             setEstadisticas(data);
+            
+            // Calcular total de votos
+            const total = data.reduce((sum, candidato) => sum + parseInt(candidato.total_votos || 0), 0);
+            setTotalVotos(total);
+            setEstadoConexion('conectado');
         } catch (error) {
             console.error('Error al obtener estadísticas:', error);
+            setEstadoConexion('error');
             throw error;
         }
     };
     // Función para agregar candidato
     const agregarCandidato = async () => {
+        if (votacionFinalizada) {
+            setMensaje('No se pueden agregar candidatos después de finalizar la votación');
+            return;
+        }
+        
         if (!nuevoNombre.trim()) {
             setMensaje('El nombre del candidato es requerido');
             return;
@@ -95,10 +112,15 @@ const Dashboard = () => {
             if (response.ok) {
                 setNuevoNombre('');
                 setNuevaDescripcion('');
-                setMensaje('Candidato agregado correctamente');
+                setMensaje('✅ Candidato agregado correctamente');
                 // Refrescar la lista de candidatos
-                fetchCandidatos();
-                fetchEstadisticas();
+                await Promise.all([
+                    fetchCandidatos(),
+                    fetchEstadisticas()
+                ]);
+                
+                // Limpiar mensaje después de 3 segundos
+                setTimeout(() => setMensaje(''), 3000);
             
             } else {
                 const error = await response.json();
@@ -163,6 +185,49 @@ const Dashboard = () => {
             setMensaje('Error al conectar con el servidor para finalizar');
         } finally {
             setFinalizandoVotacion(false);
+        }
+    };
+
+    // Función para iniciar nueva votación
+    const nuevaVotacion = async () => {
+        if (!window.confirm('¿Está seguro de que desea iniciar una nueva votación? Esto eliminará todos los datos actuales (candidatos, votos y usuarios).')) {
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/nueva-votacion`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                const resultado = await response.json();
+                // Resetear todos los estados
+                setCandidatos([]);
+                setEstadisticas([]);
+                setGanador(null);
+                setVotacionFinalizada(false);
+                setMensaje('Nueva votación iniciada. Todos los datos han sido limpiados.');
+                
+                // Recargar datos
+                await Promise.all([
+                    fetchCandidatos(),
+                    fetchEstadisticas(),
+                ]);
+                
+                console.log('🎉 Nueva votación iniciada:', resultado);
+            } else {
+                const error = await response.json();
+                setMensaje(`Error al iniciar nueva votación: ${error.error}`);
+            }
+        } catch (error) {
+            console.error('Error al iniciar nueva votación:', error);
+            setMensaje('Error al conectar con el servidor para iniciar nueva votación');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -258,43 +323,60 @@ const Dashboard = () => {
                                 <div className="stats-container">
                                     <div className="stats-header">
                                         <div className="stats-title">Región Austral</div>
-                                        {!votacionFinalizada && (
-                                            <button 
-                                                className="btn-finalizar"
-                                                onClick={finalizarVotacion}
-                                                disabled={finalizandoVotacion}
-                                            >
-                                                {finalizandoVotacion ? 'Finalizando...' : 'Finalizar Votación'}
-                                            </button>
-                                        )}
+                                        <div className="buttons-container">
+                                            {!votacionFinalizada ? (
+                                                <button 
+                                                    className="btn btn-danger"
+                                                    onClick={finalizarVotacion}
+                                                    disabled={finalizandoVotacion}
+                                                >
+                                                    {finalizandoVotacion ? 'Finalizando...' : 'Finalizar Votación'}
+                                                </button>
+                                            ) : (
+                                                <button 
+                                                    className="btn btn-primary"
+                                                    onClick={nuevaVotacion}
+                                                    disabled={loading}
+                                                >
+                                                    {loading ? 'Iniciando...' : 'Nueva Votación'}
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="stats-chart">
                                         <ResponsiveContainer width="100%" height={300}>
-                                            <BarChart data={estadisticas}>
-                                                <XAxis dataKey="nombre" />
-                                                <YAxis />
-                                                <Tooltip />
-                                                <Bar dataKey="total_votos" fill="#2052d3" />
+                                            <BarChart data={estadisticas} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                                                <XAxis 
+                                                    dataKey="nombre" 
+                                                    tick={{ fontSize: 12 }}
+                                                    interval={0}
+                                                />
+                                                <YAxis tick={{ fontSize: 12 }} />
+                                                <Tooltip 
+                                                    contentStyle={{
+                                                        backgroundColor: 'white',
+                                                        border: '1px solid #e5e7eb',
+                                                        borderRadius: '8px',
+                                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                                    }}
+                                                    formatter={(value, name) => [
+                                                        `${value} votos`,
+                                                        'Total'
+                                                    ]}
+                                                />
+                                                <Bar 
+                                                    dataKey="total_votos" 
+                                                    fill="#2052d3" 
+                                                    radius={[4, 4, 0, 0]}
+                                                />
                                             </BarChart>
                                         </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="card">
-                                <div className="card-title">Autenticación por Huella</div>
-                                <div className="fingerprint-container">
-                                    <div className="fingerprint-scanner">
-                                        <svg className="fingerprint-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                                            <g fill="none" stroke="#2052d3" strokeWidth="2">
-                                                <path d="M50,15 C31.2,15 16,30.2 16,49 C16,67.8 31.2,83 50,83 C68.8,83 84,67.8 84,49 C84,30.2 68.8,15 50,15 Z" />
-                                                <path d="M50,25 C36.7,25 26,35.7 26,49 C26,62.3 36.7,73 50,73 C63.3,73 74,62.3 74,49 C74,35.7 63.3,25 50,25 Z" />
-                                                <path d="M50,35 C42.3,35 36,41.3 36,49 C36,56.7 42.3,63 50,63 C57.7,63 64,56.7 64,49 C64,41.3 57.7,35 50,35 Z" />
-                                                <path d="M50,45 C47.8,45 46,46.8 46,49 C46,51.2 47.8,53 50,53 C52.2,53 54,51.2 54,49 C54,46.8 52.2,45 50,45 Z" />
-                                            </g>
-                                        </svg>
-                                    </div>
-                                    <div className="fingerprint-message">
-                                        Sistema de autenticación por huella digital
+                                        {estadisticas.length === 0 && (
+                                            <div className="chart-empty-state">
+                                                <p>No hay datos de votación disponibles</p>
+                                                <p className="text-sm text-light">Los votos aparecerán aquí cuando se registren</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -310,6 +392,7 @@ const Dashboard = () => {
                                         placeholder="Nombre del candidato"
                                         value={nuevoNombre}
                                         onChange={(e) => setNuevoNombre(e.target.value)}
+                                        disabled={votacionFinalizada}
                                     />
                                     <textarea
                                         className="form-input mt-2"
@@ -317,38 +400,75 @@ const Dashboard = () => {
                                         value={nuevaDescripcion}
                                         onChange={(e) => setNuevaDescripcion(e.target.value)}
                                         rows="3"
+                                        disabled={votacionFinalizada}
                                     ></textarea>
-                                    <button className="btn-primary mt-2" onClick={agregarCandidato}>
-                                        <Plus size={16} /> Agregar
+                                    <button 
+                                        className="btn-primary mt-2" 
+                                        onClick={agregarCandidato}
+                                        disabled={votacionFinalizada}
+                                        title={votacionFinalizada ? "No se pueden agregar candidatos después de finalizar" : "Agregar nuevo candidato"}
+                                    >
+                                        <Plus size={16} /> {votacionFinalizada ? 'Votación Finalizada' : 'Agregar'}
                                     </button>
                                 </div>
                                 {mensaje && <div className={`message ${mensaje.includes('Error') ? 'error' : ''}`}>{mensaje}</div>}
 
                                 <div className="candidates-list mt-4">
                                     <h3>Candidatos Registrados ({candidatos.length})</h3>
-                                    <table className="candidates-table">
-                                        <thead>
-                                        <tr>
-                                            <th style={{width: '80%'}}>Nombre</th>
-                                            <th style={{width: '20%'}}>Acciones</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        {candidatos.map((candidato) => (
-                                            <tr key={candidato.id_candidato}>
-                                                <td>{candidato.nombre}</td>
-                                                <td>
-                                                    <button
-                                                        className="btn-danger"
-                                                        onClick={() => eliminarCandidato(candidato.id_candidato)}
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        </tbody>
-                                    </table>
+                                    {candidatos.length > 0 ? (
+                                        <table className="candidates-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style={{width: '50%'}}>Nombre</th>
+                                                    <th style={{width: '30%'}}>Votos</th>
+                                                    <th style={{width: '20%'}}>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {candidatos.map((candidato) => {
+                                                    const estadistica = estadisticas.find(est => est.id_candidato === candidato.id_candidato);
+                                                    const votos = estadistica ? parseInt(estadistica.total_votos) : 0;
+                                                    const porcentaje = totalVotos > 0 ? ((votos / totalVotos) * 100).toFixed(1) : 0;
+                                                    
+                                                    return (
+                                                        <tr key={candidato.id_candidato}>
+                                                            <td>
+                                                                <div className="candidate-info">
+                                                                    <strong>{candidato.nombre}</strong>
+                                                                    {candidato.descripcion && (
+                                                                        <div className="candidate-description">
+                                                                            {candidato.descripcion}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <div className="vote-info">
+                                                                    <span className="vote-count">{votos}</span>
+                                                                    <span className="vote-percentage">({porcentaje}%)</span>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <button
+                                                                    className="btn-danger"
+                                                                    onClick={() => eliminarCandidato(candidato.id_candidato)}
+                                                                    disabled={votacionFinalizada}
+                                                                    title={votacionFinalizada ? "No se pueden eliminar candidatos después de finalizar" : "Eliminar candidato"}
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    ) : (
+                                        <div className="empty-state">
+                                            <p>No hay candidatos registrados.</p>
+                                            <p className="text-sm text-light">Agregue candidatos usando el formulario anterior.</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -388,40 +508,67 @@ const Dashboard = () => {
         <div className="App">
             <div className="main-container">
                 <div className="sidebar">
-                    <div className="sidebar-logo">
-                        <div>DeD</div>
+                    <div className="sidebar-header">
+                        <h1 className="sidebar-title">DeDoCracia</h1>
+                        <p className="sidebar-subtitle">Sistema Electoral</p>
                     </div>
-                    <div className="sidebar-menu">
-                        <div
-                            className={`sidebar-item ${activeSection === 'dashboard' ? 'active' : ''}`}
+                    <nav className="sidebar-nav">
+                        <button
+                            className={`nav-item ${activeSection === 'dashboard' ? 'active' : ''}`}
                             onClick={() => setActiveSection('dashboard')}
                         >
-                            <div className="sidebar-item-icon">
-                                <Activity size={24} />
-                            </div>
-                            <div className="sidebar-item-label">Dashboard</div>
-                        </div>
-                        <div
-                            className={`sidebar-item ${activeSection === 'candidatos' ? 'active' : ''}`}
+                            <Activity size={20} style={{marginRight: '0.75rem'}} />
+                            Dashboard
+                        </button>
+                        <button
+                            className={`nav-item ${activeSection === 'candidatos' ? 'active' : ''}`}
                             onClick={() => setActiveSection('candidatos')}
                         >
-                            <div className="sidebar-item-icon">
-                                <PieChart size={24} />
-                            </div>
-                            <div className="sidebar-item-label">Candidatos</div>
-                        </div>
-                    </div>
+                            <PieChart size={20} style={{marginRight: '0.75rem'}} />
+                            Candidatos
+                        </button>
+                    </nav>
                 </div>
                 <div className="dashboard">
                     <div className="dashboard-header">
-                        <h2 className="dashboard-title">DeDoCracia</h2>
+                        <div>
+                            <h2 className="dashboard-title">DeDoCracia</h2>
+                            <p className="dashboard-subtitle">Sistema de Votación Electrónica Segura</p>
+                        </div>
+                        <div className="dashboard-stats">
+                            <div className="stat-item">
+                                <span className="stat-label">Total Votos:</span>
+                                <span className="stat-value">{totalVotos}</span>
+                            </div>
+                            <div className="stat-item">
+                                <span className="stat-label">Candidatos:</span>
+                                <span className="stat-value">{candidatos.length}</span>
+                            </div>
+                            <div className={`connection-status ${estadoConexion}`}>
+                                <span className="status-indicator"></span>
+                                {estadoConexion === 'conectado' && 'Conectado'}
+                                {estadoConexion === 'conectando' && 'Conectando...'}
+                                {estadoConexion === 'error' && 'Sin conexión'}
+                            </div>
+                        </div>
                     </div>
                     {renderContent()}
                 </div>
             </div>
 
             <div className="footer">
-                © 2025 DeDoCracia S.A.S. Todos los derechos reservados
+                <div className="footer-content">
+                    <div className="footer-section">
+                        <strong>© 2025 DeDoCracia S.A.S.</strong>
+                        <span>Sistema de Votación Electrónica Segura</span>
+                    </div>
+                    <div className="footer-section">
+                        <span>Estado: {votacionFinalizada ? 'Votación Finalizada' : 'Votación Activa'}</span>
+                        <span className="footer-stats">
+                            {candidatos.length} candidatos • {totalVotos} votos totales
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
     );

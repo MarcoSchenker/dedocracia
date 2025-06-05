@@ -30,6 +30,15 @@ String mensajeConfirmacion = "";
 bool candidatosRecibidos = false;
 bool votacionFinalizada = false;
 
+// Variables para control de votos duplicados
+struct VotoRegistrado {
+  int id_huella;
+  unsigned long timestamp;
+};
+VotoRegistrado votosRegistrados[100]; // Máximo 100 votos en memoria
+int totalVotosRegistrados = 0;
+const unsigned long TIMEOUT_VOTO = 300000; // 5 minutos en milisegundos
+
 String nombreCandidato1 = "Candidato 1";
 String nombreCandidato2 = "Candidato 2";
 int idCandidato1 = 1;
@@ -39,6 +48,45 @@ int idCandidato2 = 2;
 String nombreGanador = "";
 int votosGanador = 0;
 bool mostrandoGanador = false;
+
+// Función para verificar si ya votó recientemente
+bool yaVoto(int idHuella) {
+  unsigned long tiempoActual = millis();
+  for (int i = 0; i < totalVotosRegistrados; i++) {
+    if (votosRegistrados[i].id_huella == idHuella) {
+      // Verificar si han pasado 5 minutos desde el último voto
+      if (tiempoActual - votosRegistrados[i].timestamp < TIMEOUT_VOTO) {
+        return true; // Ya votó recientemente
+      } else {
+        // El timeout expiró, permitir nuevo voto
+        // Actualizar timestamp para el nuevo voto
+        votosRegistrados[i].timestamp = tiempoActual;
+        return false;
+      }
+    }
+  }
+  return false; // No ha votado antes
+}
+
+// Función para registrar un voto localmente
+void registrarVotoLocal(int idHuella) {
+  unsigned long tiempoActual = millis();
+  
+  // Buscar si ya existe un registro para esta huella
+  for (int i = 0; i < totalVotosRegistrados; i++) {
+    if (votosRegistrados[i].id_huella == idHuella) {
+      votosRegistrados[i].timestamp = tiempoActual;
+      return;
+    }
+  }
+  
+  // Si no existe, crear nuevo registro
+  if (totalVotosRegistrados < 100) {
+    votosRegistrados[totalVotosRegistrados].id_huella = idHuella;
+    votosRegistrados[totalVotosRegistrados].timestamp = tiempoActual;
+    totalVotosRegistrados++;
+  }
+}
 
 void setup() {
   Serial.begin(115200);
@@ -99,11 +147,25 @@ void loop() {
     // Verificar si es huella existente
     if (finger.image2Tz() == FINGERPRINT_OK) {
       if (finger.fingerFastSearch() == FINGERPRINT_OK) {
-        // Huella existente encontrada - proceder a votar
+        // Huella existente encontrada
         id_huella_actual = finger.fingerID;
+        
+        // Verificar si ya votó recientemente
+        if (yaVoto(id_huella_actual)) {
+          mostrar("Ya votaste\nrecientemente\nEspera 5 min");
+          delay(3000);
+          mostrar("Sistema listo\nPonga huella\npara votar");
+          return;
+        }
+        
+        // Puede votar
         mostrar("Huella reconocida\nID: " + String(id_huella_actual));
         delay(1000);
         pedirVoto();
+        
+        // Registrar el voto localmente
+        registrarVotoLocal(id_huella_actual);
+        
       } else {
         // Huella nueva - registrar automáticamente
         if (proximo_id_huella <= 162) {
@@ -116,6 +178,9 @@ void loop() {
             proximo_id_huella++; // Incrementar para la próxima
             esperarConfirmacion();
             pedirVoto();
+            
+            // Registrar el voto localmente
+            registrarVotoLocal(id_huella_actual);
           } else {
             mostrar("Error al registrar");
           }
@@ -273,11 +338,15 @@ bool enrollFingerAuto(int id) {
     delay(50);
   }
 
-  mostrar("Mismo dedo\notra vez...");
-  delay(1000);
+  mostrar("Mismo dedo\notra vez...\n20 segundos");
   
-  // Segunda imagen
+  // Segunda imagen con 20 segundos de timeout
+  unsigned long t1 = millis();
   while ((p = finger.getImage()) != FINGERPRINT_OK) {
+    if (millis() - t1 > 20000) { // 20 segundos timeout
+      mostrar("Tiempo agotado\npara segundo\ndedo");
+      return false;
+    }
     delay(50);
   }
 
@@ -339,22 +408,23 @@ void pedirVoto() {
     }
   }
 
-  mostrar("Elija candidato:\n[1] " + nombreCandidato1 + "\n[2] " + nombreCandidato2);
-  Serial.println("Esperando voto: 1=" + nombreCandidato1 + " o 2=" + nombreCandidato2);
+  // Mostrar candidatos con colores de botones
+  mostrar("Elija candidato:\n[ROJO] " + nombreCandidato1 + "\n[AZUL] " + nombreCandidato2);
+  Serial.println("Esperando voto: ROJO=" + nombreCandidato1 + " o AZUL=" + nombreCandidato2);
 
   unsigned long tiempoInicio = millis();
   bool votado = false;
 
-  // CAMBIADO: Reducido de 15000 a 10000 ms (10 segundos)
-  while (!votado && millis() - tiempoInicio < 10000) {
+  // Timeout de 60 segundos (1 minuto) para votar
+  while (!votado && millis() - tiempoInicio < 60000) {
     if (digitalRead(BOTON_1) == LOW) {
-      mostrar("Voto: " + nombreCandidato1);
+      mostrar("Voto: " + nombreCandidato1 + "\n(ROJO)");
       publicarVoto(id_huella_actual, idCandidato1);
       votado = true;
       delay(1000); // Evitar doble pulsación
     }
     if (digitalRead(BOTON_2) == LOW) {
-      mostrar("Voto: " + nombreCandidato2);
+      mostrar("Voto: " + nombreCandidato2 + "\n(AZUL)");
       publicarVoto(id_huella_actual, idCandidato2);
       votado = true;
       delay(1000); // Evitar doble pulsación
@@ -364,7 +434,7 @@ void pedirVoto() {
   }
 
   if (!votado) {
-    mostrar("Tiempo agotado\n(10 segundos)\nsin votar");
+    mostrar("Tiempo agotado\n(1 minuto)\nsin votar");
   }
   delay(2000);
 }
