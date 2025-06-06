@@ -800,6 +800,44 @@ body {
   font-weight: 600;
 }
 
+/* Tie card */
+.tie-card {
+  background: linear-gradient(135deg, var(--warning-color) 0%, #d97706 100%);
+  color: white;
+  margin-bottom: 2rem;
+  animation: pulse 2s infinite;
+}
+
+.tie-card .card-title {
+  color: white;
+  font-size: 1.75rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.tie-info {
+  text-align: center;
+}
+
+.tie-candidates {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+
+.tie-votes {
+  font-size: 1.25rem;
+  opacity: 0.9;
+  margin-bottom: 1rem;
+}
+
+.tie-message {
+  font-size: 1.1rem;
+  font-weight: 600;
+  opacity: 0.95;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .sidebar {

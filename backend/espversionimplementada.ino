@@ -39,6 +39,9 @@ int idCandidato2 = 2;
 String nombreGanador = "";
 int votosGanador = 0;
 bool mostrandoGanador = false;
+bool hayEmpate = false;
+String candidatosEmpatados = "";
+int votosEmpate = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -88,9 +91,9 @@ void loop() {
   if (!client.connected()) reconnect();
   client.loop();
 
-  // Si la votación está finalizada, mostrar ganador
+  // Si la votación está finalizada, mostrar resultado
   if (votacionFinalizada && mostrandoGanador) {
-    mostrarGanador();
+    mostrarResultado();
     return;
   }
 
@@ -209,17 +212,36 @@ void callback(char* topic, byte* payload, unsigned int length) {
       return;
     }
 
-    if (doc["finalizada"] == true && doc["ganador"]) {
-      nombreGanador = doc["ganador"]["nombre"].as<String>();
-      votosGanador = doc["ganador"]["votos"];
+    if (doc["finalizada"] == true) {
       votacionFinalizada = true;
       mostrandoGanador = true;
-
-      Serial.println("🏆 VOTACIÓN FINALIZADA!");
-      Serial.println("Ganador: " + nombreGanador);
-      Serial.println("Votos: " + String(votosGanador));
       
-      mostrarGanador();
+      // Verificar si hay empate
+      if (doc["empate"] == true) {
+        hayEmpate = true;
+        votosEmpate = doc["votos_empate"];
+        candidatosEmpatados = "";
+        
+        JsonArray empatados = doc["candidatos_empatados"];
+        for (int i = 0; i < empatados.size(); i++) {
+          if (i > 0) candidatosEmpatados += " y ";
+          candidatosEmpatados += empatados[i]["nombre"].as<String>();
+        }
+        
+        Serial.println("🤝 EMPATE DETECTADO!");
+        Serial.println("Candidatos empatados: " + candidatosEmpatados);
+        Serial.println("Votos: " + String(votosEmpate));
+      } else if (doc["ganador"]) {
+        hayEmpate = false;
+        nombreGanador = doc["ganador"]["nombre"].as<String>();
+        votosGanador = doc["ganador"]["votos"];
+        
+        Serial.println("🏆 VOTACIÓN FINALIZADA!");
+        Serial.println("Ganador: " + nombreGanador);
+        Serial.println("Votos: " + String(votosGanador));
+      }
+      
+      mostrarResultado();
     }
   }
 }
@@ -261,7 +283,7 @@ bool enrollFingerAuto(int id) {
   }
 
   mostrar("Retire dedo...");
-  delay(1500);
+  delay(2000); // Dar más tiempo para retirar
   
   // Esperar a que retire el dedo (hasta 10 segundos)
   unsigned long t0 = millis();
@@ -270,19 +292,17 @@ bool enrollFingerAuto(int id) {
       mostrar("Timeout retiro");
       return false;
     }
-    delay(50);
+    delay(100); // Aumentar delay para reducir frecuencia de lectura
   }
 
-  mostrar("Mismo dedo\notra vez...\n10 segundos");
+  mostrar("Mismo dedo\notra vez...\nTiene 10 segundos");
+  delay(5000); // Esperar 10 segundos para colocar el dedo
   
-  // CAMBIADO: Segunda imagen con 10 segundos de timeout
-  unsigned long t1 = millis();
-  while ((p = finger.getImage()) != FINGERPRINT_OK) {
-    if (millis() - t1 > 10000) { // 10 segundos timeout
-      mostrar("Tiempo agotado\npara segundo\ndedo");
-      return false;
-    }
-    delay(50);
+  // Segunda imagen sin timeout - intento directo
+  p = finger.getImage();
+  if (p != FINGERPRINT_OK) {
+    mostrar("Tiempo agotado\npara segundo\ndedo");
+    return false;
   }
 
   p = finger.image2Tz(2);
@@ -391,6 +411,66 @@ void mostrar(String texto) {
     }
   }
   display.sendBuffer();
+}
+
+void mostrarResultado() {
+  if (hayEmpate) {
+    mostrarEmpate();
+  } else {
+    mostrarGanador();
+  }
+}
+
+void mostrarEmpate() {
+  display.clearBuffer();
+  
+  // Título
+  display.setFont(u8g2_font_7x14_tf);
+  display.drawStr(20, 15, "EMPATE!");
+  
+  // Candidatos empatados
+  display.setFont(u8g2_font_6x10_tf);
+  
+  // Dividir el texto si es muy largo
+  if (candidatosEmpatados.length() > 18) {
+    int mitad = candidatosEmpatados.indexOf(" y ");
+    if (mitad > 0) {
+      String parte1 = candidatosEmpatados.substring(0, mitad);
+      String parte2 = candidatosEmpatados.substring(mitad + 3);
+      
+      int x1 = (128 - (parte1.length() * 6)) / 2;
+      int x2 = (128 - (parte2.length() * 6)) / 2;
+      
+      display.drawStr(max(0, x1), 32, parte1.c_str());
+      display.drawStr(max(0, x2), 44, parte2.c_str());
+    } else {
+      display.drawStr(0, 32, candidatosEmpatados.c_str());
+    }
+  } else {
+    int nombreX = (128 - (candidatosEmpatados.length() * 6)) / 2;
+    display.drawStr(max(0, nombreX), 35, candidatosEmpatados.c_str());
+  }
+  
+  // Votos
+  String votosTexto = "Votos: " + String(votosEmpate);
+  int votosX = (128 - (votosTexto.length() * 6)) / 2;
+  display.drawStr(max(0, votosX), 56, votosTexto.c_str());
+  
+  display.sendBuffer();
+  
+  // Parpadear
+  static unsigned long ultimoCambio = 0;
+  static bool visible = true;
+  
+  if (millis() - ultimoCambio > 1500) { // Cambiar cada 1.5 segundos
+    ultimoCambio = millis();
+    visible = !visible;
+    
+    if (!visible) {
+      display.clearBuffer();
+      display.sendBuffer();
+    }
+  }
 }
 
 void mostrarGanador() {

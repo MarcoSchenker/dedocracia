@@ -19,6 +19,11 @@ const Dashboard = () => {
     const [finalizandoVotacion, setFinalizandoVotacion] = useState(false);
     const [estadoConexion, setEstadoConexion] = useState('conectado');
     const [totalVotos, setTotalVotos] = useState(0);
+    
+    // Estados para manejar empates
+    const [hayEmpate, setHayEmpate] = useState(false);
+    const [candidatosEmpatados, setCandidatosEmpatados] = useState([]);
+    const [votosEmpate, setVotosEmpate] = useState(0);
 
     // Cargar datos
     useEffect(() => {
@@ -172,10 +177,28 @@ const Dashboard = () => {
             if (response.ok) {
                 const resultado = await response.json();
                 setVotacionFinalizada(true);
-                setGanador(resultado.ganador);
                 setEstadisticas(resultado.estadisticas);
-                setMensaje(`Votación finalizada. Ganador: ${resultado.ganador.nombre} con ${resultado.ganador.votos} votos`);
-                console.log('🏆 Resultado de la votación:', resultado);
+                
+                if (resultado.empate) {
+                    // Es un empate
+                    setHayEmpate(true);
+                    setCandidatosEmpatados(resultado.candidatos_empatados);
+                    setVotosEmpate(resultado.votos_empate);
+                    setGanador(null);
+                    
+                    const nombresEmpatados = resultado.candidatos_empatados.map(c => c.nombre).join(' y ');
+                    setMensaje(`🤝 EMPATE: ${nombresEmpatados} con ${resultado.votos_empate} votos cada uno`);
+                    console.log('🤝 Empate detectado:', resultado);
+                } else {
+                    // Hay ganador
+                    setHayEmpate(false);
+                    setCandidatosEmpatados([]);
+                    setVotosEmpate(0);
+                    setGanador(resultado.ganador);
+                    
+                    setMensaje(`Votación finalizada. Ganador: ${resultado.ganador.nombre} con ${resultado.ganador.votos} votos`);
+                    console.log('🏆 Resultado de la votación:', resultado);
+                }
             } else {
                 const error = await response.json();
                 setMensaje(`Error al finalizar votación: ${error.error}`);
@@ -210,6 +233,9 @@ const Dashboard = () => {
                 setEstadisticas([]);
                 setGanador(null);
                 setVotacionFinalizada(false);
+                setHayEmpate(false);
+                setCandidatosEmpatados([]);
+                setVotosEmpate(0);
                 setMensaje('Nueva votación iniciada. Todos los datos han sido limpiados.');
                 
                 // Recargar datos
@@ -307,13 +333,27 @@ const Dashboard = () => {
                 return (
                     <>
                         {/* Mensaje del ganador si la votación está finalizada */}
-                        {votacionFinalizada && ganador && (
+                        {votacionFinalizada && ganador && !hayEmpate && (
                             <div className="card winner-card">
                                 <div className="card-title">🏆 GANADOR DE LA VOTACIÓN</div>
                                 <div className="winner-info">
                                     <h2 className="winner-name">{ganador.nombre}</h2>
                                     <p className="winner-votes">{ganador.votos} votos</p>
                                     <div className="winner-message">¡Felicitaciones al ganador!</div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Mensaje de empate si la votación está finalizada con empate */}
+                        {votacionFinalizada && hayEmpate && candidatosEmpatados.length > 0 && (
+                            <div className="card tie-card">
+                                <div className="card-title">🤝 EMPATE EN LA VOTACIÓN</div>
+                                <div className="tie-info">
+                                    <h2 className="tie-candidates">
+                                        {candidatosEmpatados.map(c => c.nombre).join(' y ')}
+                                    </h2>
+                                    <p className="tie-votes">{votosEmpate} votos cada uno</p>
+                                    <div className="tie-message">¡Se necesita una nueva votación para desempatar!</div>
                                 </div>
                             </div>
                         )}

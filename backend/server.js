@@ -221,17 +221,7 @@ app.post('/api/finalizar-votacion', async (req, res) => {
   try {
     console.log('🏁 Iniciando finalización de votación...');
     
-    // Obtener el ganador con más votos
-    const ganadorResult = await pool.query(`
-      SELECT c.id_candidato, c.nombre, COUNT(v.id_voto) as total_votos
-      FROM candidatos c
-      LEFT JOIN votaciones v ON c.id_candidato = v.id_candidato
-      GROUP BY c.id_candidato, c.nombre
-      ORDER BY total_votos DESC, c.nombre ASC
-      LIMIT 1
-    `);
-    
-    // Obtener estadísticas completas
+    // Obtener estadísticas completas ordenadas por votos
     const estadisticasResult = await pool.query(`
       SELECT c.id_candidato, c.nombre, COUNT(v.id_voto) as total_votos
       FROM candidatos c
@@ -244,24 +234,53 @@ app.post('/api/finalizar-votacion', async (req, res) => {
     const totalVotantesResult = await pool.query('SELECT COUNT(DISTINCT id_usuario) as total FROM votaciones');
     const totalVotantes = parseInt(totalVotantesResult.rows[0].total) || 0;
     
-    if (ganadorResult.rows.length > 0) {
-      const ganador = ganadorResult.rows[0];
+    if (estadisticasResult.rows.length > 0) {
+      const estadisticas = estadisticasResult.rows.map(row => ({
+        nombre: row.nombre,
+        id: row.id_candidato,
+        votos: parseInt(row.total_votos)
+      }));
       
-      const resultadoFinal = {
-        ganador: {
-          nombre: ganador.nombre,
-          id: ganador.id_candidato,
-          votos: parseInt(ganador.total_votos)
-        },
-        estadisticas: estadisticasResult.rows.map(row => ({
-          nombre: row.nombre,
-          id: row.id_candidato,
-          votos: parseInt(row.total_votos)
-        })),
-        total_votantes: totalVotantes,
-        finalizada: true,
-        fecha_finalizacion: new Date().toISOString()
-      };
+      // Verificar si hay empate (mismo número de votos en los primeros lugares)
+      const maxVotos = estadisticas[0].votos;
+      const candidatosConMaxVotos = estadisticas.filter(candidato => candidato.votos === maxVotos);
+      
+      let resultadoFinal;
+      
+      if (candidatosConMaxVotos.length > 1) {
+        // HAY EMPATE
+        console.log('🤝 EMPATE DETECTADO entre', candidatosConMaxVotos.length, 'candidatos con', maxVotos, 'votos cada uno');
+        
+        resultadoFinal = {
+          empate: true,
+          votos_empate: maxVotos,
+          candidatos_empatados: candidatosConMaxVotos,
+          estadisticas: estadisticas,
+          total_votantes: totalVotantes,
+          finalizada: true,
+          fecha_finalizacion: new Date().toISOString()
+        };
+        
+        console.log('🤝 Empate entre:', candidatosConMaxVotos.map(c => c.nombre).join(' y '));
+      } else {
+        // HAY GANADOR CLARO
+        const ganador = estadisticas[0];
+        
+        resultadoFinal = {
+          empate: false,
+          ganador: {
+            nombre: ganador.nombre,
+            id: ganador.id,
+            votos: ganador.votos
+          },
+          estadisticas: estadisticas,
+          total_votantes: totalVotantes,
+          finalizada: true,
+          fecha_finalizacion: new Date().toISOString()
+        };
+        
+        console.log('🏆 Votación finalizada. Ganador:', ganador.nombre, 'con', ganador.votos, 'votos');
+      }
       
       // Enviar resultado al ESP32 vía MQTT
       if (mqttClient && mqttClient.connected) {
@@ -269,7 +288,6 @@ app.post('/api/finalizar-votacion', async (req, res) => {
         console.log('📤 Resultado enviado al ESP32 vía MQTT');
       }
       
-      console.log('🏆 Votación finalizada. Ganador:', ganador.nombre, 'con', ganador.total_votos, 'votos');
       res.status(200).json(resultadoFinal);
     } else {
       res.status(404).json({ error: 'No se encontraron candidatos' });
