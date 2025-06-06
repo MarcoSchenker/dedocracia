@@ -271,58 +271,68 @@ bool enrollFingerAuto(int id) {
   int p;
   mostrar("Mantenga dedo\nen sensor...");
   
-  // Primera imagen
+  // PRIMERA IMAGEN
   while ((p = finger.getImage()) != FINGERPRINT_OK) {
-    delay(50);
+    delay(100);
   }
-
   p = finger.image2Tz(1);
   if (p != FINGERPRINT_OK) {
     mostrar("Error imagen 1");
     return false;
   }
+ mostrar("Retire dedo...");
 
-  mostrar("Retire dedo...");
-  delay(2000); // Dar más tiempo para retirar
+unsigned long start = millis();
+bool dedoRetirado = false;
+while (millis() - start < 3000) { // Máximo 3 segundos esperando retiro
+    int res = finger.getImage();
+    if (res == FINGERPRINT_NOFINGER) {
+        dedoRetirado = true;
+        break;
+    }
+    Serial.print("Esperando retiro, res: "); Serial.println(res);
+    delay(100);
+}
+if (!dedoRetirado) {
+    Serial.println("No se detectó retiro de dedo, sigo igual (by-pass)");
+}
+delay(500); // estabiliza el sensor
+
   
-  // Esperar a que retire el dedo (hasta 10 segundos)
-  unsigned long t0 = millis();
-  while (finger.getImage() != FINGERPRINT_NOFINGER) {
-    if (millis() - t0 > 10000) {  // 10 segundos máximo
-      mostrar("Timeout retiro");
+  mostrar("Mismo dedo\notra vez...");
+  delay(1000);
+  // ESPERAR QUE PONGA OTRA VEZ
+  start = millis();
+  bool pusoDedo = false;
+  while (!pusoDedo) {
+    delay(4000);
+    p = finger.getImage();
+    if (p == FINGERPRINT_OK) {
+      pusoDedo = true;
+      break;
+    }
+    if (millis() - start > 10000) {
+      mostrar("Timeout segundo dedo");
       return false;
     }
-    delay(100); // Aumentar delay para reducir frecuencia de lectura
+    delay(2000);
   }
-
-  mostrar("Mismo dedo\notra vez...\nTiene 10 segundos");
-  delay(5000); // Esperar 10 segundos para colocar el dedo
-  
-  // Segunda imagen sin timeout - intento directo
-  p = finger.getImage();
-  if (p != FINGERPRINT_OK) {
-    mostrar("Tiempo agotado\npara segundo\ndedo");
-    return false;
-  }
-
   p = finger.image2Tz(2);
   if (p != FINGERPRINT_OK) {
     mostrar("Error imagen 2");
     return false;
   }
-  
   if (finger.createModel() != FINGERPRINT_OK) {
     mostrar("Error modelo");
     return false;
   }
-  
   if (finger.storeModel(id) != FINGERPRINT_OK) {
     mostrar("Error guardar");
     return false;
   }
-
   return true;
 }
+
 
 void publicarHuella(int id) {
   DynamicJsonDocument doc(128);
@@ -364,8 +374,8 @@ void pedirVoto() {
   }
 
   // CAMBIADO: Colores de botones - AZUL para candidato 1, ROJO para candidato 2
-  mostrar("Elija candidato:\n[AZUL] " + nombreCandidato1 + "\n[ROJO] " + nombreCandidato2);
-  Serial.println("Esperando voto: AZUL=" + nombreCandidato1 + " o ROJO=" + nombreCandidato2);
+  mostrar("Elija candidato:\n[ROJO] " + nombreCandidato1 + "\n[AZUL] " + nombreCandidato2);
+  Serial.println("Esperando voto: ROJO=" + nombreCandidato1 + " o AZUL=" + nombreCandidato2);
 
   unsigned long tiempoInicio = millis();
   bool votado = false;
@@ -373,13 +383,13 @@ void pedirVoto() {
   // CAMBIADO: Reducido de 15000 a 10000 ms (10 segundos)
   while (!votado && millis() - tiempoInicio < 10000) {
     if (digitalRead(BOTON_1) == LOW) {
-      mostrar("Voto: " + nombreCandidato1 + "\n(AZUL)");
+      mostrar("Voto: " + nombreCandidato1 + "\n(ROJO)");
       publicarVoto(id_huella_actual, idCandidato1);
       votado = true;
       delay(1000); // Evitar doble pulsación
     }
     if (digitalRead(BOTON_2) == LOW) {
-      mostrar("Voto: " + nombreCandidato2 + "\n(ROJO)");
+      mostrar("Voto: " + nombreCandidato2 + "\n(AZUL)");
       publicarVoto(id_huella_actual, idCandidato2);
       votado = true;
       delay(1000); // Evitar doble pulsación
