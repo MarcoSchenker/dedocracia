@@ -244,6 +244,24 @@ void callback(char* topic, byte* payload, unsigned int length) {
       mostrarResultado();
     }
   }
+
+  if (String(topic) == "dedocracia/comando") {
+    Serial.println("Mensaje de comando crudo: " + mensaje);
+    DynamicJsonDocument doc(256);
+    DeserializationError error = deserializeJson(doc, mensaje);
+
+    if (error) {
+      Serial.print("Error al parsear comando: ");
+      Serial.println(error.c_str());
+      return;
+    }
+
+    String accion = doc["accion"];
+    if (accion == "borrar_huellas") {
+      Serial.println("🗑️ COMANDO RECIBIDO: Borrar todas las huellas");
+      borrarTodasLasHuellas();
+    }
+  }
 }
 
 void reconnect() {
@@ -256,6 +274,7 @@ void reconnect() {
       client.subscribe("dedocracia/confirmacion");
       client.subscribe("dedocracia/candidatos");
       client.subscribe("dedocracia/resultado");
+      client.subscribe("dedocracia/comando");
       Serial.println("Solicitando lista de candidatos...");
       client.publish("dedocracia/solicitud", "{\"accion\":\"obtener_candidatos\"}");
     } else {
@@ -519,4 +538,55 @@ void mostrarGanador() {
       display.sendBuffer();
     }
   }
+}
+
+void borrarTodasLasHuellas() {
+  mostrar("Borrando todas\nlas huellas...");
+  Serial.println("🗑️ Iniciando borrado de todas las huellas...");
+  
+  int huellasBorradas = 0;
+  int errores = 0;
+  
+  // Borrar huellas del ID 1 al 162 (máximo del sensor AS608)
+  for (int id = 1; id <= 162; id++) {
+    if (finger.deleteModel(id) == FINGERPRINT_OK) {
+      huellasBorradas++;
+      Serial.print("✅ Huella ");
+      Serial.print(id);
+      Serial.println(" borrada");
+    } else {
+      errores++;
+    }
+    
+    // Mostrar progreso cada 20 huellas
+    if (id % 20 == 0) {
+      mostrar("Borrando...\n" + String(id) + "/162\n" + String(huellasBorradas) + " borradas");
+      delay(100);
+    }
+  }
+  
+  // Resetear el contador de próximo ID
+  proximo_id_huella = 1;
+  
+  Serial.println("🗑️ BORRADO COMPLETADO!");
+  Serial.println("📊 Huellas borradas: " + String(huellasBorradas));
+  Serial.println("❌ Errores: " + String(errores));
+  
+  // Mostrar resultado final
+  mostrar("Borrado completo!\n" + String(huellasBorradas) + " huellas\nborradas");
+  delay(3000);
+  
+  // Resetear variables de estado
+  votacionFinalizada = false;
+  mostrandoGanador = false;
+  hayEmpate = false;
+  candidatosEmpatados = "";
+  votosEmpate = 0;
+  nombreGanador = "";
+  votosGanador = 0;
+  candidatosRecibidos = false;
+  
+  // Volver al estado inicial
+  mostrar("Sistema listo\nPonga huella\npara registrar");
+  Serial.println("🔄 Sistema reiniciado y listo para nueva votación");
 }

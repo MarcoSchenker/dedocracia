@@ -286,6 +286,15 @@ app.post('/api/finalizar-votacion', async (req, res) => {
       if (mqttClient && mqttClient.connected) {
         mqttClient.publish('dedocracia/resultado', JSON.stringify(resultadoFinal));
         console.log('📤 Resultado enviado al ESP32 vía MQTT');
+        
+        // Enviar comando para borrar huellas después de 5 segundos
+        setTimeout(() => {
+          mqttClient.publish('dedocracia/comando', JSON.stringify({
+            accion: 'borrar_huellas',
+            timestamp: new Date().toISOString()
+          }));
+          console.log('🗑️ Comando de borrado de huellas enviado al ESP32');
+        }, 5000); // Esperar 5 segundos para que el ESP32 muestre el resultado
       }
       
       res.status(200).json(resultadoFinal);
