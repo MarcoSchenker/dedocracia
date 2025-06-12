@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('./db');
 const cors = require('cors');
 const mqtt = require('mqtt');
+const { iniciarVotacion, resetearVotacion } = require('./mqtt_service');
 
 const app = express();
 const PORT = 3000;
@@ -140,6 +141,33 @@ app.delete('/api/candidatos/:id', async (req, res) => {
         res.status(500).json({ error: 'Error al eliminar candidato' });
     }
 }); 
+
+// POST: Iniciar votación (enviar candidatos al ESP32)
+app.post('/api/iniciar-votacion', async (req, res) => {
+    try {
+        // Obtener todos los candidatos
+        const result = await pool.query('SELECT id_candidato AS id, nombre FROM candidatos ORDER BY id_candidato ASC');
+        
+        if (result.rows.length < 2) {
+            return res.status(400).json({ error: 'Se necesitan al menos 2 candidatos para iniciar la votación' });
+        }
+
+        // Iniciar votación y enviar candidatos al ESP32 vía MQTT service
+        iniciarVotacion();
+        
+        res.status(200).json({
+            mensaje: 'Votación iniciada correctamente',
+            candidatos: result.rows,
+            total_candidatos: result.rows.length
+        });
+        
+        console.log('🚀 Votación iniciada desde el frontend con', result.rows.length, 'candidatos');
+        
+    } catch (err) {
+        console.error('Error al iniciar votación:', err);
+        res.status(500).json({ error: 'Error al iniciar votación' });
+    }
+});
 
 // Rutas para votaciones
 // POST: Registrar un voto
@@ -329,6 +357,9 @@ app.post('/api/nueva-votacion', async (req, res) => {
     await pool.query('ALTER SEQUENCE usuarios_id_usuario_seq RESTART WITH 1');
     await pool.query('ALTER SEQUENCE votaciones_id_voto_seq RESTART WITH 1');
     console.log('✅ Secuencias de IDs reiniciadas');
+    
+    // Resetear estado de votación en el servicio MQTT
+    resetearVotacion();
     
     // Notificar al ESP32 que se reinició el sistema
     if (mqttClient && mqttClient.connected) {

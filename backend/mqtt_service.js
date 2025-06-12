@@ -18,6 +18,9 @@ const MQTT_OPTIONS = {
 
 console.log(`📶 Conectando a MQTT broker: ${MQTT_BROKER}`);
 
+// Estado de la votación
+let votacionIniciada = false;
+
 // Conectar al broker MQTT
 const client = mqtt.connect(MQTT_BROKER, MQTT_OPTIONS);
 
@@ -50,8 +53,9 @@ client.on('connect', () => {
     if (!err) console.log('✅ Suscrito a dedocracia/finalizacion');
   });
 
-  // Publicar lista de candidatos al conectar
-  publicarCandidatos();
+  // NOTA: Ya no publicamos candidatos automáticamente al conectar
+  // Los candidatos solo se publican cuando se presiona "Iniciar Votación"
+  console.log('📋 Esperando comando para iniciar votación...');
 });
 
 // Manejar errores
@@ -209,18 +213,34 @@ async function registrarVoto(id_huella, id_candidato) {
 // Publicar los 2 candidatos actuales vía MQTT
 async function publicarCandidatos() {
   try {
+    if (!votacionIniciada) {
+      console.log('⏳ Votación no iniciada aún - Enviando mensaje de espera al ESP32');
+      client.publish('dedocracia/candidatos', JSON.stringify({
+        candidatos: [],
+        mensaje: 'Esperando inicio de votación',
+        iniciada: false
+      }));
+      return;
+    }
+
     // Enviar todos los candidatos disponibles (sin límite)
     const result = await pool.query('SELECT id_candidato AS id, nombre FROM candidatos ORDER BY id_candidato ASC');
     
     if (result.rows.length >= 2) {
       const candidatos = {
-        candidatos: result.rows
+        candidatos: result.rows,
+        iniciada: true
       };
       const mensaje = JSON.stringify(candidatos);
       client.publish('dedocracia/candidatos', mensaje);
       console.log('📤 Candidatos enviados por MQTT:', mensaje);
     } else {
       console.warn('⚠️ No hay suficientes candidatos en la base de datos');
+      client.publish('dedocracia/candidatos', JSON.stringify({
+        candidatos: [],
+        mensaje: 'Se necesitan al menos 2 candidatos',
+        iniciada: false
+      }));
     }
   } catch (error) {
     console.error('❌ Error al publicar candidatos:', error);
@@ -326,6 +346,26 @@ function reconnect() {
     }
   }
 }
+
+// Función para iniciar votación (cambiar estado y publicar candidatos)
+function iniciarVotacion() {
+  votacionIniciada = true;
+  console.log('🚀 Votación iniciada desde el frontend');
+  publicarCandidatos();
+}
+
+// Función para resetear votación
+function resetearVotacion() {
+  votacionIniciada = false;
+  console.log('🔄 Estado de votación reseteado');
+}
+
+// Exportar funciones para uso externo
+module.exports = {
+  client,
+  iniciarVotacion,
+  resetearVotacion
+};
 
 // Manejar el cierre de la aplicación
 process.on('SIGINT', () => {

@@ -341,6 +341,11 @@ body {
   color: white;
 }
 
+.btn-success:hover {
+  background: #059669;
+  transform: translateY(-2px);
+}
+
 .btn-large {
   padding: 1.25rem 2.5rem;
   font-size: 1.1rem;
@@ -835,6 +840,54 @@ body {
 .tie-message {
   font-size: 1.1rem;
   font-weight: 600;
+  opacity: 0.95;
+}
+
+/* Info card */
+.info-card {
+  background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+  color: white;
+  margin-bottom: 2rem;
+}
+
+.info-card .card-title {
+  color: white;
+  font-size: 1.5rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.info-content {
+  text-align: center;
+}
+
+.info-content p {
+  font-size: 1rem;
+  line-height: 1.6;
+  opacity: 0.95;
+}
+
+/* Success card */
+.success-card {
+  background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
+  color: white;
+  margin-bottom: 2rem;
+}
+
+.success-card .card-title {
+  color: white;
+  font-size: 1.5rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.success-content {
+  text-align: center;
+}
+
+.success-content p {
+  font-size: 1rem;
+  line-height: 1.6;
   opacity: 0.95;
 }
 

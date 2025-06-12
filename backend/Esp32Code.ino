@@ -16,7 +16,7 @@ const int mqtt_port = 1883;
 #define BOTON_1 18
 #define BOTON_2 25
 
-Adafruit_Fingerprint finger(&Serial2);
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&Serial2);
 U8G2_SSD1309_128X64_NONAME0_F_HW_I2C display(U8G2_R0, U8X8_PIN_NONE, SCL_OLED, SDA_OLED);
 
 WiFiClient espClient;
@@ -67,8 +67,8 @@ void setup() {
   // Cargar próximo ID de huella desde memoria
   cargarProximoID();
   
-  mostrar("Sistema listo\nPonga huella\npara registrar");
-  Serial.println("\nSistema listo. Coloque huella para auto-registro...");
+  mostrar("Esperando\ncandidatos...\nSin candidatos\nno se puede votar");
+  Serial.println("\nSistema listo. Esperando candidatos para iniciar votación...");
 }
 
 void cargarProximoID() {
@@ -97,6 +97,13 @@ void loop() {
     return;
   }
 
+  // NUEVO: Verificar que haya candidatos antes de permitir registro de huellas
+  if (!candidatosRecibidos) {
+    mostrar("Esperando\ncandidatos...\nSin candidatos\nno se puede votar");
+    delay(2000);
+    return;
+  }
+
   // Detectar huella automáticamente (sin entrada por Serial)
   if (finger.getImage() == FINGERPRINT_OK) {
     // Verificar si es huella existente
@@ -108,7 +115,7 @@ void loop() {
         Serial.println("Huella ya registrada. No puede votar de nuevo.");
         delay(2000);
       } else {
-        // Huella nueva - registrar automáticamente
+        // Huella nueva - registrar automáticamente SOLO SI HAY CANDIDATOS
         if (proximo_id_huella <= 162) {
           mostrar("Nueva huella\nRegistrando...\nID: " + String(proximo_id_huella));
           
@@ -185,6 +192,16 @@ void callback(char* topic, byte* payload, unsigned int length) {
       return;
     }
 
+    // Verificar si la votación ha sido iniciada
+    bool iniciada = doc["iniciada"];
+    if (!iniciada) {
+      String mensajeEspera = doc["mensaje"];
+      Serial.println("Votación no iniciada: " + mensajeEspera);
+      mostrar("Esperando inicio\nde votacion...\n" + mensajeEspera);
+      candidatosRecibidos = false;
+      return;
+    }
+
     JsonArray candidatos = doc["candidatos"];
     if (candidatos && candidatos.size() >= 2) {
       idCandidato1 = candidatos[0]["id"];
@@ -196,8 +213,14 @@ void callback(char* topic, byte* payload, unsigned int length) {
       Serial.println("Candidatos recibidos:");
       Serial.println("1: " + nombreCandidato1 + " (ID: " + String(idCandidato1) + ")");
       Serial.println("2: " + nombreCandidato2 + " (ID: " + String(idCandidato2) + ")");
+      
+      // Actualizar pantalla para mostrar que ya se pueden registrar huellas
+      mostrar("Candidatos OK!\nSistema listo\nPonga huella\npara votar");
+      delay(2000);
     } else {
       Serial.println("No se encontraron al menos 2 candidatos en el mensaje.");
+      mostrar("Error: faltan\ncandidatos");
+      candidatosRecibidos = false;
     }
   }
 
@@ -262,6 +285,26 @@ void callback(char* topic, byte* payload, unsigned int length) {
       borrarTodasLasHuellas();
     }
   }
+
+  if (String(topic) == "dedocracia/reset") {
+    Serial.println("🔄 RESET RECIBIDO: Nueva votación iniciada");
+    
+    // Resetear todas las variables
+    candidatosRecibidos = false;
+    votacionFinalizada = false;
+    mostrandoGanador = false;
+    hayEmpate = false;
+    nombreGanador = "";
+    votosGanador = 0;
+    candidatosEmpatados = "";
+    votosEmpate = 0;
+    
+    // Mostrar mensaje de espera
+    mostrar("Sistema reseteado\nEsperando nueva\nvotacion...");
+    
+    // Solicitar candidatos (que ahora no llegaran hasta que se inicie)
+    client.publish("dedocracia/solicitud", "{\"accion\":\"obtener_candidatos\"}");
+  }
 }
 
 void reconnect() {
@@ -275,6 +318,7 @@ void reconnect() {
       client.subscribe("dedocracia/candidatos");
       client.subscribe("dedocracia/resultado");
       client.subscribe("dedocracia/comando");
+      client.subscribe("dedocracia/reset");
       Serial.println("Solicitando lista de candidatos...");
       client.publish("dedocracia/solicitud", "{\"accion\":\"obtener_candidatos\"}");
     } else {
@@ -418,7 +462,7 @@ void pedirVoto() {
   }
 
   if (!votado) {
-    mostrar("Tiempo agotado\n(10 segundos)\nsin votar");
+    mostrar("Tiempo agotado\n(30 segundos)\nsin votar");
   }
   delay(2000);
 }
@@ -587,6 +631,9 @@ void borrarTodasLasHuellas() {
   candidatosRecibidos = false;
   
   // Volver al estado inicial
-  mostrar("Sistema listo\nPonga huella\npara registrar");
+  mostrar("Esperando\ncandidatos...\nSin candidatos\nno se puede votar");
   Serial.println("🔄 Sistema reiniciado y listo para nueva votación");
+
+  // 👇 ESTA LÍNEA ES LA CLAVE 👇
+  client.publish("dedocracia/solicitud", "{\"accion\":\"obtener_candidatos\"}");
 }

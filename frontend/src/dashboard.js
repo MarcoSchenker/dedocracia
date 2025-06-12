@@ -24,6 +24,10 @@ const Dashboard = () => {
     const [hayEmpate, setHayEmpate] = useState(false);
     const [candidatosEmpatados, setCandidatosEmpatados] = useState([]);
     const [votosEmpate, setVotosEmpate] = useState(0);
+    
+    // Estados para manejar el inicio de votación
+    const [votacionIniciada, setVotacionIniciada] = useState(false);
+    const [iniciandoVotacion, setIniciandoVotacion] = useState(false);
 
     // Cargar datos
     useEffect(() => {
@@ -96,6 +100,11 @@ const Dashboard = () => {
             return;
         }
         
+        if (votacionIniciada) {
+            setMensaje('No se pueden agregar candidatos después de iniciar la votación');
+            return;
+        }
+        
         if (!nuevoNombre.trim()) {
             setMensaje('El nombre del candidato es requerido');
             return;
@@ -139,6 +148,11 @@ const Dashboard = () => {
 
     // Función para eliminar candidato
     const eliminarCandidato = async (id) => {
+        if (votacionIniciada) {
+            setMensaje('No se pueden eliminar candidatos después de iniciar la votación');
+            return;
+        }
+        
         try {
             const response = await fetch(`${API_BASE_URL}/api/candidatos/${id}`, {
                 method: 'DELETE',
@@ -156,6 +170,46 @@ const Dashboard = () => {
         } catch (error) {
             console.error('Error al eliminar candidato:', error);
             setMensaje('Error al conectar con el servidor');
+        }
+    };
+
+    // Función para iniciar votación
+    const iniciarVotacion = async () => {
+        if (candidatos.length < 2) {
+            setMensaje('Se necesitan al menos 2 candidatos para iniciar la votación');
+            return;
+        }
+
+        if (!window.confirm('¿Está seguro de que desea iniciar la votación? Los candidatos se enviarán al ESP32 y comenzará el proceso de votación.')) {
+            return;
+        }
+
+        setIniciandoVotacion(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/iniciar-votacion`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                const resultado = await response.json();
+                setVotacionIniciada(true);
+                setMensaje('🚀 Votación iniciada correctamente. Los candidatos han sido enviados al ESP32.');
+                console.log('🚀 Votación iniciada:', resultado);
+                
+                // Limpiar mensaje después de 5 segundos
+                setTimeout(() => setMensaje(''), 5000);
+            } else {
+                const error = await response.json();
+                setMensaje(`Error al iniciar votación: ${error.error}`);
+            }
+        } catch (error) {
+            console.error('Error al iniciar votación:', error);
+            setMensaje('Error al conectar con el servidor para iniciar votación');
+        } finally {
+            setIniciandoVotacion(false);
         }
     };
 
@@ -233,6 +287,7 @@ const Dashboard = () => {
                 setEstadisticas([]);
                 setGanador(null);
                 setVotacionFinalizada(false);
+                setVotacionIniciada(false);
                 setHayEmpate(false);
                 setCandidatosEmpatados([]);
                 setVotosEmpate(0);
@@ -332,6 +387,26 @@ const Dashboard = () => {
             case 'dashboard':
                 return (
                     <>
+                        {/* Mensaje informativo cuando hay candidatos pero no se ha iniciado la votación */}
+                        {!votacionIniciada && !votacionFinalizada && candidatos.length >= 2 && (
+                            <div className="card info-card">
+                                <div className="card-title">📋 Candidatos Listos</div>
+                                <div className="info-content">
+                                    <p>Tienes {candidatos.length} candidatos registrados. Presiona "Iniciar Votación" para enviar los candidatos al ESP32 y comenzar el proceso de votación.</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Mensaje informativo cuando la votación está iniciada */}
+                        {votacionIniciada && !votacionFinalizada && (
+                            <div className="card success-card">
+                                <div className="card-title">✅ Votación en Curso</div>
+                                <div className="success-content">
+                                    <p>La votación está activa. Los candidatos han sido enviados al ESP32 y los usuarios pueden votar usando sus huellas dactilares.</p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Mensaje del ganador si la votación está finalizada */}
                         {votacionFinalizada && ganador && !hayEmpate && (
                             <div className="card winner-card">
@@ -366,27 +441,35 @@ const Dashboard = () => {
                                     <div className="card">
                                         <div className="card-title">Información Estadística</div>
                                         <div className="stats-container">
-                                            <div className="stats-header">
-                                                <div className="stats-title">Región Austral</div>
-                                                <div className="buttons-container">
-                                                    {!votacionFinalizada ? (
-                                                        <button 
-                                                            className="btn btn-danger"
-                                                            onClick={finalizarVotacion}
-                                                            disabled={finalizandoVotacion}
-                                                        >
-                                                            {finalizandoVotacion ? 'Finalizando...' : 'Finalizar'}
-                                                        </button>
-                                                    ) : (
-                                                        <button 
-                                                            className="btn btn-primary"
-                                                            onClick={nuevaVotacion}
-                                                            disabled={loading}
-                                                        >
-                                                            {loading ? 'Iniciando...' : 'Nueva Votación'}
-                                                        </button>
-                                                    )}
-                                                </div>
+                                            <div className="stats-header">                                <div className="stats-title">Región Austral</div>
+                                <div className="buttons-container">
+                                    {!votacionIniciada && !votacionFinalizada ? (
+                                        <button 
+                                            className="btn btn-success"
+                                            onClick={iniciarVotacion}
+                                            disabled={iniciandoVotacion || candidatos.length < 2}
+                                            title={candidatos.length < 2 ? "Se necesitan al menos 2 candidatos" : "Iniciar votación y enviar candidatos al ESP32"}
+                                        >
+                                            {iniciandoVotacion ? 'Iniciando...' : 'Iniciar Votación'}
+                                        </button>
+                                    ) : !votacionFinalizada ? (
+                                        <button 
+                                            className="btn btn-danger"
+                                            onClick={finalizarVotacion}
+                                            disabled={finalizandoVotacion}
+                                        >
+                                            {finalizandoVotacion ? 'Finalizando...' : 'Finalizar'}
+                                        </button>
+                                    ) : (
+                                        <button 
+                                            className="btn btn-primary"
+                                            onClick={nuevaVotacion}
+                                            disabled={loading}
+                                        >
+                                            {loading ? 'Iniciando...' : 'Nueva Votación'}
+                                        </button>
+                                    )}
+                                </div>
                                             </div>
                                             <div className="stats-chart">
                                                 <ResponsiveContainer width="100%" height={300}>
@@ -440,7 +523,7 @@ const Dashboard = () => {
                                                 placeholder="Nombre del candidato"
                                                 value={nuevoNombre}
                                                 onChange={(e) => setNuevoNombre(e.target.value)}
-                                                disabled={votacionFinalizada}
+                                                disabled={votacionFinalizada || votacionIniciada}
                                             />
                                             <textarea
                                                 className="form-input mt-2"
@@ -448,15 +531,23 @@ const Dashboard = () => {
                                                 value={nuevaDescripcion}
                                                 onChange={(e) => setNuevaDescripcion(e.target.value)}
                                                 rows="3"
-                                                disabled={votacionFinalizada}
+                                                disabled={votacionFinalizada || votacionIniciada}
                                             ></textarea>
                                             <button 
                                                 className="btn-primary btn-large mt-2" 
                                                 onClick={agregarCandidato}
-                                                disabled={votacionFinalizada}
-                                                title={votacionFinalizada ? "No se pueden agregar candidatos después de finalizar" : "Agregar nuevo candidato"}
+                                                disabled={votacionFinalizada || votacionIniciada}
+                                                title={
+                                                    votacionFinalizada ? "No se pueden agregar candidatos después de finalizar" : 
+                                                    votacionIniciada ? "No se pueden agregar candidatos después de iniciar la votación" :
+                                                    "Agregar nuevo candidato"
+                                                }
                                             >
-                                                <Plus size={20} /> {votacionFinalizada ? 'Votación Finalizada' : 'Agregar Candidato'}
+                                                <Plus size={20} /> {
+                                                    votacionFinalizada ? 'Votación Finalizada' : 
+                                                    votacionIniciada ? 'Votación Iniciada' :
+                                                    'Agregar Candidato'
+                                                }
                                             </button>
                                         </div>
                                         {mensaje && <div className={`message ${mensaje.includes('Error') ? 'error' : ''}`}>{mensaje}</div>}
@@ -507,8 +598,12 @@ const Dashboard = () => {
                                                                 <button
                                                                     className="btn-danger"
                                                                     onClick={() => eliminarCandidato(candidato.id_candidato)}
-                                                                    disabled={votacionFinalizada}
-                                                                    title={votacionFinalizada ? "No se pueden eliminar candidatos después de finalizar" : "Eliminar candidato"}
+                                                                    disabled={votacionFinalizada || votacionIniciada}
+                                                                    title={
+                                                                        votacionFinalizada ? "No se pueden eliminar candidatos después de finalizar" :
+                                                                        votacionIniciada ? "No se pueden eliminar candidatos después de iniciar la votación" :
+                                                                        "Eliminar candidato"
+                                                                    }
                                                                 >
                                                                     <Trash2 size={16} />
                                                                 </button>
