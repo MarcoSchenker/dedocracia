@@ -1,34 +1,11 @@
 const express = require('express');
 const pool = require('./db');
 const cors = require('cors');
-const mqtt = require('mqtt');
-const { iniciarVotacion, resetearVotacion } = require('./mqtt_service');
+const { iniciarVotacion, resetearVotacion, client: mqttClient } = require('./mqtt_service');
 
 const app = express();
 const PORT = 3000;
 const HOST = '0.0.0.0'; // Escucha en todas las interfaces
-
-// Configuración de MQTT para poder comunicarse con el ESP32
-const MQTT_BROKER = 'mqtt://34.197.123.11:1883';
-let mqttClient;
-
-// Inicializar conexión MQTT
-function initMQTT() {
-  mqttClient = mqtt.connect(MQTT_BROKER, {
-    clientId: 'server_' + Math.random().toString(16).substr(2, 8)
-  });
-
-  mqttClient.on('connect', () => {
-    console.log('🚀 Servidor conectado a MQTT broker');
-  });
-
-  mqttClient.on('error', (error) => {
-    console.error('❌ Error MQTT en servidor:', error);
-  });
-}
-
-// Inicializar MQTT
-initMQTT();
 
 // Configuración de CORS para permitir peticiones desde el frontend
 app.use(cors());
@@ -48,7 +25,6 @@ app.get('/api/lideres', (req, res) => {
 // Rutas para usuarios
 // GET: Obtener todos los usuarios
 app.get('/api/usuarios', async (req, res) => {
-
   try {
     const { rows } = await pool.query('SELECT * FROM usuarios');
     res.json(rows);

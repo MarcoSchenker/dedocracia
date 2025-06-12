@@ -28,7 +28,14 @@ node\x20/ 1914          ubuntu   26u  IPv4  14695      0t0  TCP *:3000 (LISTEN)
 
 Para iniciar todo el proyecto:
 pm2 start ~/dedocracia/backend/server.js --name backend
-pm2 start ~/dedocracia/backend/mqtt_service.js --name mqtt_service
+pm2 serve ~/dedocracia/frontend/build 3001 --name frontend
+
+NOTA IMPORTANTE: NO ejecutar mqtt_service.js por separado ya que server.js ya lo incluye.
+Ejecutar ambos causa procesamiento doble de mensajes MQTT.
+
+OLD (causaba votos dobles):
+pm2 start ~/dedocracia/backend/server.js --name backend
+pm2 start ~/dedocracia/backend/mqtt_service.js --name mqtt_service  # ❌ NO HACER ESTO
 pm2 serve ~/dedocracia/frontend/build 3001 --name frontend
 Usuario ingresa ID por Serial → 2. Registra huella → 3. Se publica a MQTT → 4. Servidor confirma → 5. Usuario vota → 6. Voto se publica a MQTT
 A su vez quiero quiero agregar algunas consultas y modificar el codigo del ESP32 para que pueda mostrar en la pantalla OLED el ganador una vez que en la pagina web se

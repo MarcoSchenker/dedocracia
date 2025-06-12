@@ -9,7 +9,7 @@ const MQTT_PASSWORD = '';
 
 const MQTT_OPTIONS = {
   port: MQTT_PORT,
-  clientId: 'dedocracia_' + Math.random().toString(16).substr(2, 8),
+  clientId: 'LOCAL_DEBUG_' + Math.random().toString(16).substr(2, 8),
   username: MQTT_USER,
   password: MQTT_PASSWORD,
   keepalive: 60,
